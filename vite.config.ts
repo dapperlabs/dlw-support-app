@@ -18,5 +18,5 @@ export default defineConfig({
       utils: "/src/utils"
     },
   },
-  base: '/dw-escape-hatch/'
+  base: '/dlw-support-app/'
 })
