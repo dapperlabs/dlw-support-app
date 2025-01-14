@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://halfasecond.github.io/dw-escape-hatch/",
+  "homepage": "https://dapperlabs.github.io/dlw-support-app/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
