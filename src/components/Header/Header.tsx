@@ -5,7 +5,7 @@ import { AuthProps } from 'types/auth'
 const Header: React.FC<AuthProps> = ({ loggedIn, handleSignIn, handleSignOut, isDapper, BASE_URL }) => {
     return (
         <>
-            <h1><Link to={'/'}>{'Escape Hatch POC'}</Link></h1>
+            <h1><Link to={'/'}>{'Dapper Legacy Wallet Support App'}</Link></h1>
             {loggedIn ? (
                 <button onClick={handleSignOut}>
                     <WalletLogo logo={isDapper ? 'dapper' : 'metamask'} {...{ BASE_URL }} />
