@@ -2,9 +2,9 @@
 
 This app allows a user to administer their Dapper Legacy Wallet pending Google making the plugin obsolete.
 
-The app will be available at:
+The app is available at:
 
-```final link```
+```https://dapperlabs.github.io/dlw-support-app/```
 
 and uses GitHub pages to create a build of the `main` branch
 
@@ -14,7 +14,7 @@ Create a .env file:
 
 ```
 DOCKERFILE=Dockerfile.dev
-CONTAINER_NAME=dw-escape-hatch
+CONTAINER_NAME=dlw-support-app
 PORT=5952
 VITE_APP_CHAIN_ID=0x1
 ```
