@@ -14,7 +14,6 @@ const SetDapperWallet: React.FC<Props> = ({ walletAddress, walletDetails, handle
         <>
             <h2>{'Signer Address:'}</h2>
             <code>{walletAddress}</code>
-            <p>{'Add the Dapper legacy wallet you want to use:'}</p>
             {walletDetails.dapperWallet ? (
                 <>
                     <h3>Dapper Wallet address:</h3>
@@ -27,6 +26,7 @@ const SetDapperWallet: React.FC<Props> = ({ walletAddress, walletDetails, handle
                 </>
             ) : (
                 <>
+                    <p>{'Add the Dapper legacy wallet you want to use:'}</p>
                     <label>
                         {'Set dapper wallet address:'}
                         <input
