@@ -34,32 +34,12 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
         setAuthVersion()
     }, [walletAddress])
 
-    // useEffect(() => {
-    //     if (walletDetails.cosigner) {
-    //       setWalletDetails(prevState => ({ ...prevState, cosigner: undefined }))
-    //     }
-    // }, [walletDetails.getCosigner])
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, changeParam: keyof WalletDetails) => {
         const { value } = e.target
         const newState = { ...walletDetails }
         newState[changeParam] = value
-        setWalletDetails(newState) // TODO: add validation
+        setWalletDetails(newState)
     }
-
-    // const handleGetCosigner = async () => {
-    //     try {
-    //         const authVersion = await getAuthVersion()
-    //         const shiftedAuthVersion = shift(authVersion)
-    //         const authorizedAddressBN = BigInt(walletDetails.getCosigner)
-    //         const key = (shiftedAuthVersion << BigInt(160)) | authorizedAddressBN
-    //         const rawAuthorizedValue = await contract.methods.authorizations(key.toString()).call() as string
-    //         const cosigner = `0x${(BigInt(rawAuthorizedValue) & BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).toString(16).padStart(40, '0')}`
-    //         setWalletDetails(prevState => ({ ...prevState, authVersion: shiftedAuthVersion.toString(), cosigner }))
-    //     } catch (error) {
-    //         alert('Error while fetching cosigner')
-    //     }
-    // }
 
     const getAuthVersion = async () => {
         const _authVersion = await contract.methods.authVersion().call() as string
@@ -72,6 +52,9 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
     const handleSetAuthorized = async () => {
         try {
             const { newAuthorized } = walletDetails
+            if (newAuthorized.startsWith('0x0000000000000000')) {
+                alert('Is this a Flow wallet address? You need to use an Ethereum wallet address so please ensure this is the wallet you have entered.')
+            }
             await contract.methods.setAuthorized(newAuthorized, newAuthorized).send({ from: walletAddress, value: "0x0" })
             setAuthorizationSuccess(true)
         } catch (error) {
@@ -109,26 +92,6 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
                     />
                 </>
             )}
-
-            {/* <h1>Get cosigner for authorized address:</h1>
-            <input
-                type="text"
-                value={walletDetails.getCosigner}
-                onChange={e => handleInputChange(e, 'getCosigner')}
-            />
-            {walletDetails.cosigner ? (
-                <>
-                    <h3>{walletDetails.cosigner.toLowerCase() === walletDetails.getCosigner.toLowerCase() ? 'authorized / cosigner pair' : 'cosigner'} for this address is:</h3>
-                    <code>{walletDetails.cosigner}</code>
-                </>
-            ) : (
-                <input
-                    type="submit"
-                    onClick={handleGetCosigner}
-                    value="Get co-signer for address"
-                    disabled={walletDetails.getCosigner === ''} // TODO - add better validation
-                />
-            )} */}
         </>
     )
 }
