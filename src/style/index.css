@@ -53,3 +53,27 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.error {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+textarea {
+  padding: 8px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+textarea:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

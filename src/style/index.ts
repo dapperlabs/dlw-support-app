@@ -48,6 +48,7 @@ export const Main = styled.main`
     margin: 0 auto;
     max-width: 1592px;
     margin-top: 40px;
+    padding-bottom: ${gutters['xxl']};
     > h1 {
         margin: ${gutters['xxl']} 0 ${gutters['lg']};
     }
@@ -60,11 +61,11 @@ export const Main = styled.main`
             margin-bottom: ${gutters['xl']};
         }
     }
+    h4 {
+        margin-bottom: ${gutters['md']};
+    }
     > p {
         max-width: 900px;
-        > b {
-            font-weight: bold;
-        }
         + ul {
             margin-top: ${gutters['lg']};
         }
@@ -101,6 +102,12 @@ export const Main = styled.main`
     > label {
         font-weight: bold; 
     }
+    p > b {
+        font-weight: bold;
+    }
+    > div {
+        margin-top: ${gutters['md']}; 
+    }
     input[type='text'], input[type='number'], textarea {
         padding: ${gutters['md']} ${gutters['lg']};
         font-family: monospace;
@@ -111,8 +118,8 @@ export const Main = styled.main`
     input[type='text'], textarea {
         max-width: 620px;
         &.tokenId {
-            max-width: 320px;
-            margin-left: ${gutters['lg']};
+            margin-top: ${gutters['md']};
+            
         }
     }
     input[type='submit'] {
