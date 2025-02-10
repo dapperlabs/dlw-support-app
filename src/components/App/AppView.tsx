@@ -115,14 +115,12 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
                         />
                         {isAuthorizedCosignerPair() && typeof walletDetails.dapperWallet === 'string' && (
                             <>
-                                <Menu links={['transactions', 'cryptokitties', 'ERC20', 'ERC721', 'authorizations']} />
+                                <Menu links={['transactions', 'cryptokitties', 'ERC20', 'ERC721' ]} />
                                 <Routes>
-                                    <Route path={'/'} element={<p />} />
                                     <Route path={'/transactions'} element={<EthTransactions {...{ walletAddress, invokeTx }} />} />
                                     <Route path={'/erc20'} element={<ERC20 {...{ walletAddress, invokeTx }} dapperWalletAddress={walletDetails.dapperWallet} />} />
                                     <Route path={'/erc721'} element={<ERC721 {...{ walletAddress, invokeTx }} dapperWalletAddress={walletDetails.dapperWallet} />} />
                                     <Route path={'/cryptokitties'} element={<CryptoKitties {...{ walletAddress, invokeTx, core, sale, sire }} dapperWalletAddress={walletDetails.dapperWallet} />} />
-                                    <Route path={'/authorizations'} element={<Authorizations {...{ walletAddress, walletDetails }} />} />
                                 </Routes>
                             </>
                         )}
