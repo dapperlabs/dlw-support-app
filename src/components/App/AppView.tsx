@@ -18,35 +18,89 @@ import { getContract, getCosignerForAuthorized, prepareInvokeData } from '../../
 import { AbiFragment } from 'web3'
 
 /**
- * CryptoKitties contract instances
- * Pre-initialized with their respective ABIs and addresses
+ * CryptoKitties smart contract instances initialized with their respective ABIs and addresses.
+ * These contracts enable interaction with the CryptoKitties ecosystem:
+ * - Core: Main CryptoKitties contract handling kitty ownership and breeding
+ * - Sale: Handles kitty marketplace functionality
+ * - Sire: Manages breeding auctions
+ * 
+ * @constant {Object<string, Contract>}
  */
 const core: Contract<AbiFragment[]> = getContract(Contracts.Core.abi, Contracts.Core.addr)
 const sale: Contract<AbiFragment[]> = getContract(Contracts.Sale.abi, Contracts.Sale.addr)
 const sire: Contract<AbiFragment[]> = getContract(Contracts.Sire.abi, Contracts.Sire.addr)
 
 /**
- * Main application view component
- * Handles routing, wallet connections, and component rendering based on authentication state
+ * Main application view component that orchestrates the entire UI and functionality.
+ * 
+ * Component Hierarchy:
+ * - Manages routing and navigation
+ * - Controls wallet connection states
+ * - Handles component rendering based on authentication
+ * - Coordinates contract interactions
+ * 
+ * Key Features:
+ * - Dual wallet support (Dapper and MetaMask)
+ * - Dynamic routing based on authentication state
+ * - Contract interaction management
+ * - Wallet authorization flows
+ * 
+ * State Management:
+ * - Tracks wallet contract instances
+ * - Maintains wallet connection details
+ * - Manages authorization states
+ * 
+ * Security Features:
+ * - Validates wallet connections
+ * - Ensures proper authorization
+ * - Handles transaction signing
  * 
  * @component
- * @param {AuthProps} props - Authentication related props
+ * @example
+ * ```tsx
+ * // Basic usage in App.tsx
+ * function App() {
+ *   return (
+ *     <AppView
+ *       handleSignIn={handleSignIn}
+ *       handleSignOut={handleSignOut}
+ *       loggedIn={walletAddress}
+ *       BASE_URL={BASE_URL}
+ *       isDapper={isDapper}
+ *     />
+ *   )
+ * }
+ * ```
+ * 
+ * @param {Object} props - Component props
  * @param {Function} props.handleSignIn - Handler for wallet sign in
  * @param {Function} props.handleSignOut - Handler for wallet sign out
  * @param {string} props.loggedIn - Current wallet address if logged in
  * @param {string} props.BASE_URL - Base URL for routing
  * @param {boolean} props.isDapper - Whether connected wallet is Dapper
- * @returns {JSX.Element} Main application interface
+ * @returns {JSX.Element} The main application interface
  */
 const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: walletAddress, BASE_URL, isDapper }) => {
-    // Component state
-    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined) // Dapper wallet contract
+    /**
+     * Dapper wallet contract instance state
+     * @type {[Contract<AbiFragment[]> | undefined, React.Dispatch<React.SetStateAction<Contract<AbiFragment[]> | undefined>>]}
+     */
+    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined)
+
+    /**
+     * Wallet details state including Dapper wallet address and cosigner information
+     * @type {[WalletDetails, React.Dispatch<React.SetStateAction<WalletDetails>>]}
+     */
     const [walletDetails, setWalletDetails] = useState<WalletDetails>({
         dapperWallet: undefined,
         dapperWalletInput: '',
         cosigner: undefined,
     })
 
+    /**
+     * Effect hook to initialize Dapper wallet contract when wallet is connected
+     * Only triggers when using Dapper wallet
+     */
     useEffect(() => {
         if (!contract && walletAddress && isDapper) {
             const _contract = getContract(dapperWalletAbi, walletAddress)
@@ -55,9 +109,11 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
     }, [walletAddress])
 
     /**
-     * Handles changes to wallet detail inputs
-     * @param {React.ChangeEvent<HTMLInputElement>} e - Change event
-     * @param {keyof WalletDetails} changeParam - Wallet detail field to update
+     * Handles changes to wallet detail input fields
+     * Updates the corresponding state while maintaining other values
+     * 
+     * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
+     * @param {keyof WalletDetails} changeParam - Field identifier to update
      */
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, changeParam: keyof WalletDetails) => {
         const { value } = e.target
@@ -68,15 +124,31 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
 
     /**
      * Sets up Dapper wallet connection and retrieves cosigner information
+     * Validates wallet address and establishes contract connection
+     * 
+     * Process:
+     * 1. Creates contract instance with provided address
+     * 2. Retrieves cosigner information
+     * 3. Updates wallet details state
+     * 
+     * Error Handling:
+     * - Validates wallet address format
+     * - Handles contract initialization failures
+     * - Manages cosigner retrieval errors
+     * 
      * @async
-     * @throws {Error} If wallet setup fails
+     * @throws {Error} If wallet setup or cosigner retrieval fails
      */
     const handleSetDapperWallet = async () => {
         try {
             const contract = getContract(dapperWalletAbi, walletDetails.dapperWalletInput)
             if (walletAddress) {
                 const cosigner = await getCosignerForAuthorized(walletAddress, contract)
-                setWalletDetails(prevState => ({ ...prevState, cosigner, dapperWallet: walletDetails.dapperWalletInput.toLowerCase() }))
+                setWalletDetails(prevState => ({
+                    ...prevState,
+                    cosigner,
+                    dapperWallet: walletDetails.dapperWalletInput.toLowerCase()
+                }))
             }
         } catch (error) {
             alert('Unable to set Dapper wallet address')
@@ -84,13 +156,25 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
     }
 
     /**
-     * Invokes a transaction through the Dapper wallet contract
-     * Handles transaction preparation and execution
+     * Executes a transaction through the Dapper wallet contract
+     * Handles transaction preparation, gas estimation, and execution
+     * 
+     * Process:
+     * 1. Validates wallet connection
+     * 2. Prepares transaction data
+     * 3. Estimates gas costs
+     * 4. Sends transaction
+     * 
+     * Security:
+     * - Validates wallet state
+     * - Ensures proper transaction formatting
+     * - Handles gas estimation
+     * 
      * @async
-     * @param {string} address - Contract address to interact with
+     * @param {string} address - Target contract address
      * @param {any} method - Contract method to call
      * @param {string} amount - Transaction value in wei
-     * @throws {Error} If transaction fails
+     * @throws {Error} If transaction preparation or execution fails
      */
     const invokeTx = async (address: string, method: any | undefined, amount: string | undefined) => {
         if (typeof walletDetails.dapperWallet === 'string') {
@@ -106,11 +190,14 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
     }
 
     /**
-     * Checks if current wallet is authorized cosigner
-     * @returns {boolean} Whether wallet is authorized cosigner
+     * Verifies if current wallet is an authorized cosigner
+     * Compares current wallet address with stored cosigner address
+     * 
+     * @returns {boolean} True if wallet is authorized cosigner
      */
     const isAuthorizedCosignerPair = () => walletDetails.cosigner?.toLowerCase() === walletAddress?.toLowerCase()
 
+    // Render unauthenticated view with documentation
     if (!walletAddress) {
         return (
             <Router basename={BASE_URL}>
@@ -123,7 +210,7 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
                             </Styled.Header>
                             <hr />
                             <Styled.Main>
-                                <Docs />
+                                <Docs {...{ BASE_URL }} />
                             </Styled.Main>
                         </>
                     } />
@@ -132,6 +219,7 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
         )
     }
 
+    // Render authenticated view with wallet functionality
     return (
         <Router basename={BASE_URL}>
             <ScrollToTop />
@@ -140,11 +228,13 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
             </Styled.Header>
             <hr />
             <Styled.Main>
-                {isDapper ? ( // If the user is signed in with Dapper Wallet use the authorisation UX
+                {isDapper ? (
+                    // Dapper Wallet Interface
                     contract && (
                         <Authorization walletAddress={walletAddress} {...{ contract }} />
                     )
-                ) : ( // If the user is signed in with Metamask use the interaction UX 
+                ) : (
+                    // MetaMask/Other Wallet Interface
                     <>
                         <SetDapperWallet
                             handleSave={handleSetDapperWallet}
@@ -170,8 +260,20 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
 }
 
 /**
- * Utility component that scrolls to top on route changes
+ * Utility component that handles automatic scrolling to top on route changes
+ * Improves user experience by resetting scroll position when navigating
+ * 
  * @component
+ * @example
+ * ```tsx
+ * <Router>
+ *   <ScrollToTop />
+ *   <Routes>
+ *     // ... routes
+ *   </Routes>
+ * </Router>
+ * ```
+ * 
  * @returns {null}
  */
 const ScrollToTop: React.FC = () => {

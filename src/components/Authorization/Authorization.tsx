@@ -2,14 +2,21 @@ import { useEffect, useState } from 'react'
 import { AbiItem } from 'web3-utils'
 import { Contract } from 'web3-eth-contract'
 import { isAddress } from 'web3-validator'
+import * as Styled from './Authorization.style'
 
 /**
  * Interface for managing Dapper wallet authorization details
+ * Tracks the state of wallet permissions and authorization processes
+ * 
  * @interface WalletDetails
  * @property {string} [authVersion] - Current authorization version of the wallet
+ *                                   Used for tracking permission updates
  * @property {string} [cosigner] - Cosigner address associated with the wallet
+ *                                 Address authorized to co-sign transactions
  * @property {string} newAuthorized - New address to be authorized
+ *                                    Must be a valid Ethereum address
  * @property {string} getCosigner - Address to lookup cosigner information for
+ *                                  Used for verification purposes
  */
 interface WalletDetails {
     authVersion?: string;
@@ -20,9 +27,13 @@ interface WalletDetails {
 
 /**
  * Props for the Authorization component
+ * Contains required wallet information and contract instance
+ * 
  * @interface AuthorizationProps
  * @property {string} walletAddress - Address of the Dapper wallet being managed
- * @property {Contract<AbiItem[]>} contract - Web3 contract instance for interacting with the wallet
+ *                                   Must be a valid Ethereum address
+ * @property {Contract<AbiItem[]>} contract - Web3 contract instance for wallet interactions
+ *                                           Provides methods for authorization management
  */
 interface AuthorizationProps {
     walletAddress: string;
@@ -30,15 +41,26 @@ interface AuthorizationProps {
 }
 
 /**
- * Component for managing Dapper wallet authorizations
- * Handles adding new authorized addresses and managing wallet permissions
+ * Component for managing Dapper wallet authorizations and permissions
+ * Provides interface for adding new authorized addresses and managing wallet access
+ * 
+ * Key Features:
+ * - Add new authorized addresses
+ * - Set up cosigner relationships
+ * - Verify wallet permissions
+ * - Handle authorization transactions
+ * 
+ * Security Considerations:
+ * - Validates Ethereum addresses
+ * - Confirms transaction signatures
+ * - Prevents invalid authorization attempts
+ * - Handles Flow address conflicts
  * 
  * @component
- * @param {AuthorizationProps} props - Component props
+ * @param {AuthorizationProps} props - Component properties
  * @returns {JSX.Element} Authorization management interface
  */
 const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }) => {
-    // Component state
     const [walletDetails, setWalletDetails] = useState<WalletDetails>({
         authVersion: undefined,
         cosigner: undefined,
@@ -59,8 +81,10 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
 
     /**
      * Handles form input changes for wallet details
-     * @param {React.ChangeEvent<HTMLInputElement>} e - Change event
-     * @param {keyof WalletDetails} changeParam - Field to update
+     * Updates state while maintaining other field values
+     * 
+     * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
+     * @param {keyof WalletDetails} changeParam - Field identifier to update
      */
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, changeParam: keyof WalletDetails) => {
         const { value } = e.target
@@ -71,8 +95,9 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
 
     /**
      * Retrieves the current authorization version from the contract
-     * @async
-     * @returns {Promise<bigint>} Authorization version as BigInt
+     * Used for permission management and verification
+     * 
+     * @returns {Promise<bigint>} Current authorization version as BigInt
      */
     const getAuthVersion = async () => {
         const _authVersion = await contract.methods.authVersion().call() as string
@@ -82,8 +107,9 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
 
     /**
      * Performs bitwise right shift operation by 160 bits
-     * Used for authorization version calculations
-     * @param {any} toShift - Value to shift
+     * Used in authorization version calculations
+     * 
+     * @param {any} toShift - Value to shift (expected to be BigInt)
      * @returns {bigint} Shifted value
      */
     const shift = (toShift: any) => toShift >> BigInt(160)
@@ -91,14 +117,26 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
     /**
      * Handles setting a new authorized address for the wallet
      * Validates address format and submits authorization transaction
-     * @async
-     * @throws {Error} If authorization fails
+     * 
+     * Process:
+     * 1. Validates input address
+     * 2. Checks for Flow address conflicts
+     * 3. Submits authorization transaction
+     * 4. Updates success state
+     * 
+     * Error Handling:
+     * - Validates address format
+     * - Catches transaction failures
+     * - Provides user feedback
+     * 
+     * @throws {Error} If authorization transaction fails
      */
     const handleSetAuthorized = async () => {
         try {
             const { newAuthorized } = walletDetails
             if (newAuthorized.startsWith('0x0000000000000000')) {
                 alert('Is this a Flow wallet address? You need to use an Ethereum wallet address so please ensure this is the wallet you have entered.')
+                return
             }
             await contract.methods.setAuthorized(newAuthorized, newAuthorized).send({ from: walletAddress, value: "0x0" })
             setAuthorizationSuccess(true)
@@ -108,36 +146,46 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
     }
 
     return (
-        <>
-            <h2>Dapper Wallet: <code>{walletAddress}</code></h2>
+        <Styled.Container>
+            <Styled.WalletHeader>
+                Dapper Wallet: <Styled.WalletAddress>{walletAddress}</Styled.WalletAddress>
+            </Styled.WalletHeader>
+            
             {authorizationSuccess ? (
-                <>
+                <Styled.SuccessMessage>
                     <h3>Success! New authorized / cosigner pair for this address is:</h3>
-                    <code>{walletDetails.newAuthorized}</code>
-                </>
+                    <Styled.AuthorizedAddress>{walletDetails.newAuthorized}</Styled.AuthorizedAddress>
+                </Styled.SuccessMessage>
             ) : (
-                <>
-                    <p>Use this form to add an Ethereum wallet as an authorized address to the Dapper wallet you're currently signed into.</p>
-                    <p>Ensure that you double-check the wallet address you've pasted to confirm it is correct.</p>
-                    <p>Once you're confident the address is correct, submit and sign the transaction.</p>
-                    <label htmlFor={'newAuthorized'}>
-                        {'Add new authorization:'}
-                        <input
-                            id={'newAuthorized'}
-                            type="text"
-                            value={walletDetails.newAuthorized}
-                            onChange={e => handleInputChange(e, 'newAuthorized')}
-                        />
-                    </label>
-                    <input
-                        type="submit"
+                <Styled.AuthorizationForm>
+                    <Styled.FormInstructions>
+                        <p>Use this form to add an Ethereum wallet as an authorized address to the Dapper wallet you're currently signed into.</p>
+                        <p>Ensure that you double-check the wallet address you've pasted to confirm it is correct.</p>
+                        <p>Once you're confident the address is correct, submit and sign the transaction.</p>
+                    </Styled.FormInstructions>
+                    
+                    <Styled.InputGroup>
+                        <label htmlFor="newAuthorized">
+                            Add new authorization:
+                            <Styled.AddressInput
+                                id="newAuthorized"
+                                type="text"
+                                value={walletDetails.newAuthorized}
+                                onChange={e => handleInputChange(e, 'newAuthorized')}
+                                placeholder="Enter Ethereum address (0x...)"
+                            />
+                        </label>
+                    </Styled.InputGroup>
+                    
+                    <Styled.SubmitButton
                         onClick={handleSetAuthorized}
-                        value="Set new authorized address"
                         disabled={!isAddress(walletDetails.newAuthorized)}
-                    />
-                </>
+                    >
+                        Set new authorized address
+                    </Styled.SubmitButton>
+                </Styled.AuthorizationForm>
             )}
-        </>
+        </Styled.Container>
     )
 }
 

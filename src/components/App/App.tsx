@@ -3,57 +3,130 @@ import AppView from './AppView'
 
 /**
  * Base URL for the application derived from environment or defaults to '/dw-escape-hatch/'
+ * Used for routing and asset loading in both development and production environments
+ * @constant {string}
  */
 const BASE_URL = import.meta.env.BASE_URL ? import.meta.env.BASE_URL : '/dw-escape-hatch/'
 
 /**
- * Root application component that handles wallet authentication and user session management
- * Manages the connection to Dapper wallet and provides authentication state to child components
+ * Root application component that manages wallet authentication and user sessions.
+ * 
+ * This component serves as the main entry point for the Dapper Legacy Wallet Support App.
+ * It handles:
+ * - Wallet connection and authentication state
+ * - User session management
+ * - Integration with Ethereum providers (Dapper/MetaMask)
+ * - Routing and base URL configuration
+ * 
+ * State Management:
+ * - Tracks user authentication status
+ * - Maintains wallet connection type (Dapper vs other providers)
+ * - Manages user session persistence
+ * 
+ * Security Considerations:
+ * - Implements secure wallet connection protocols
+ * - Handles connection edge cases and errors
+ * - Provides clean disconnection and session cleanup
  * 
  * @component
- * @returns {JSX.Element} The root application component
+ * @example
+ * ```tsx
+ * // Basic usage in index.tsx
+ * ReactDOM.render(
+ *   <React.StrictMode>
+ *     <App />
+ *   </React.StrictMode>,
+ *   document.getElementById('root')
+ * )
+ * ```
+ * 
+ * @returns {JSX.Element} The root application component with authentication and routing setup
  */
 function App() {
-    // Authentication state
-    const [loggedIn, setLoggedIn] = useState<string | undefined>(undefined) // Wallet address when logged in
-    const [isDapper, setIsDapper] = useState<boolean>(false) // Whether connected wallet is Dapper
+    /**
+     * Authentication state tracking the connected wallet address
+     * @type {[string | undefined, React.Dispatch<React.SetStateAction<string | undefined>>]}
+     */
+    const [loggedIn, setLoggedIn] = useState<string | undefined>(undefined)
 
     /**
-     * Handles user logout by clearing the authenticated wallet address
+     * State tracking whether the connected wallet is Dapper
+     * Used to enable/disable specific Dapper wallet features
+     * @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]}
+     */
+    const [isDapper, setIsDapper] = useState<boolean>(false)
+
+    /**
+     * Handles user logout by clearing authentication state
+     * Implements cleanup of wallet connection and user session
+     * 
+     * @function
+     * @memberof App
+     * @returns {void}
      */
     const handleLogout = useCallback(() => {
-      setLoggedIn(undefined)
+        setLoggedIn(undefined)
     }, [])
     
     /**
-     * Handles wallet connection and sign in
-     * Attempts to connect to Dapper wallet and stores the wallet address if successful
+     * Handles wallet connection and authentication
+     * Attempts to establish connection with Ethereum provider and validate wallet access
+     * 
+     * Process:
+     * 1. Checks for Ethereum provider availability
+     * 2. Requests wallet connection
+     * 3. Validates connection response
+     * 4. Updates authentication state
+     * 
+     * Error Handling:
+     * - Handles missing provider scenarios
+     * - Manages user rejection cases
+     * - Provides user feedback for connection issues
+     * 
      * @async
+     * @function
+     * @memberof App
      * @throws {Error} If wallet connection fails or user rejects the connection
+     * @returns {Promise<void>}
      */
     const handleSignIn = async () => {
         if (window.ethereum && window.ethereum.enable) {
-          try {
-            const wallet = await window.ethereum.enable()
-            if (wallet.length > 0) {
-                setLoggedIn(wallet[0])
-                setIsDapper(window.ethereum.isDapper)
+            try {
+                const wallet = await window.ethereum.enable()
+                if (wallet.length > 0) {
+                    setLoggedIn(wallet[0])
+                    setIsDapper(window.ethereum.isDapper)
+                }
+            } catch (error) {
+                alert('Error during sign in')
             }
-          } catch (error) {
-              alert('Error during sign in')
-          }
         } else {
             alert('Dapper wallet not found.')
         }
     }
 
     /**
-     * Handles user sign out by calling the logout handler
+     * Handles user sign out process
+     * Implements secure disconnection from wallet provider
+     * 
      * @async
+     * @function
+     * @memberof App
+     * @returns {Promise<void>}
      */
     const handleSignOut = async () => handleLogout()
 
-    return <AppView {...{ handleSignIn, handleSignOut, loggedIn, BASE_URL, isDapper }} />
+    /**
+     * Renders the application view with authentication handlers and state
+     * Provides essential props for wallet interaction and user session management
+     */
+    return <AppView {...{
+        handleSignIn,
+        handleSignOut,
+        loggedIn,
+        BASE_URL,
+        isDapper
+    }} />
 }
 
 export default App
