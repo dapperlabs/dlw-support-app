@@ -168,7 +168,7 @@ const ERC721: React.FC<{
     /**
      * Resets the form state to initial values
      */
-    const resetForm = () => setFormDetails(initFormState)
+    const resetForm = () => setFormDetails(initFormState(walletAddress))
 
     return (
         <>
