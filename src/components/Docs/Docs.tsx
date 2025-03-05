@@ -51,7 +51,7 @@ const Docs: React.FC = () => {
                         <li>Click "Add new authorization" and confirm the transaction</li>
                         <li>Record your Dapper wallet address for future reference</li>
                         <li>Sign out completely from the Dapper Legacy Wallet</li>
-                        <li>Turn the extension of in your browsers extension settings</li>
+                        <li>Turn the Dapper wallet extension off in your browsers extension settings</li>
                         <li>Restart your browser</li>
                     </ol>
                 </Styled.StepContent>
