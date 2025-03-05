@@ -7,6 +7,15 @@ import abis from './abis'
 import { utils } from 'web3'
 import { isAddress } from 'web3-validator'
 
+/**
+ * Interface for managing ERC20 token transfer form state
+ * @interface FormDetails
+ * @property {string} amount - Amount of tokens to transfer
+ * @property {string} contractAddress - Address of the ERC20 token contract
+ * @property {string} contractAbi - ABI of the token contract (optional)
+ * @property {boolean} loading - Loading state during transfer
+ * @property {boolean} transferSuccess - Indicates if transfer was successful
+ */
 export interface FormDetails {
     amount: string,
     contractAddress: string,
@@ -23,16 +32,31 @@ const initFormState = {
     transferSuccess: false,
 }
 
+/**
+ * Component for handling ERC20 token transfers
+ * Supports standard ERC20 tokens and wrapped tokens (WCK, WG0, WVG0)
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.walletAddress - Address of the recipient wallet
+ * @param {string} props.dapperWalletAddress - Address of the Dapper wallet
+ * @param {Function} props.invokeTx - Function to invoke token transfer
+ * @returns {JSX.Element} ERC20 token transfer interface
+ */
 const ERC20: React.FC<{ 
     walletAddress: string,
     dapperWalletAddress: string,
     invokeTx: (address: string, method: any, amount: string | undefined) => Promise<void>,
 }> = ({ walletAddress, dapperWalletAddress, invokeTx }) => {
+    // Component state
+    const [balance, setBalance] = useState<number>(0) // Token balance in smallest unit
+    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined) // ERC20 contract instance
+    const [formDetails, setFormDetails] = useState<FormDetails>(initFormState) // Form state
 
-    const [balance, setBalance] = useState<number>(0)
-    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined)
-    const [formDetails, setFormDetails] = useState<FormDetails>(initFormState)
-
+    /**
+     * Fetches the token balance for the Dapper wallet address
+     * @async
+     */
     const getTokenBalance = async () => {
         if (contract) {
             const _balance = await contract.methods.balanceOf(dapperWalletAddress).call()
@@ -48,6 +72,12 @@ const ERC20: React.FC<{
         }
     }, [contract])
 
+    /**
+     * Initializes the ERC20 contract instance with provided address and ABI
+     * Falls back to standard ERC20 ABI if no custom ABI provided
+     * @async
+     * @throws {Error} If contract initialization fails
+     */
     const handleSetContract = async () => {
         if (formDetails.contractAddress !== '') { // TODO: add better validation / type checking
             try {
@@ -60,6 +90,12 @@ const ERC20: React.FC<{
         }
     }
     
+    /**
+     * Handles token transfer from Dapper wallet to recipient
+     * Supports both standard transfer and safeTransferFrom methods
+     * @async
+     * @throws {Error} If transfer fails
+     */
     const handleTransfer = async () => {
         setFormDetails(prevState => ({ ...prevState, loading: true }))
         if (contract) {
@@ -79,6 +115,11 @@ const ERC20: React.FC<{
         }
     }
 
+    /**
+     * Sets up form with predefined contract details
+     * Used for quick selection of common wrapped token contracts
+     * @param {keyof typeof abis} contract - Key of the predefined contract
+     */
     const handleChooseContract = (contract: keyof typeof abis) => {
         if (Object.keys(abis).find((key: string) => key === contract)) {
             const { address, abi } = abis[contract]
@@ -87,6 +128,12 @@ const ERC20: React.FC<{
         }
     } 
 
+    /**
+     * Handles form input changes
+     * Updates form state while maintaining type safety
+     * @param {React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>} e - Change event
+     * @param {keyof FormDetails} changeParam - Form field to update
+     */
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>,
         changeParam: keyof FormDetails
@@ -99,16 +146,31 @@ const ERC20: React.FC<{
         setFormDetails(newState)
     }
 
+    /**
+     * Resets the form and contract state to initial values
+     */
     const resetForm = () => {
         setContract(undefined)
         setBalance(0)
         setFormDetails(initFormState)
     }
 
+    /**
+     * Formats token balance from smallest unit to ether unit
+     * Handles edge case of zero balance display
+     * @param {number} _balance - Balance in smallest unit
+     * @returns {string} Formatted balance in ether unit
+     */
     const formatBalance = (_balance: number) => utils.fromWei(_balance.toString(), 'ether') === '0.'
         ? '0'
         : utils.fromWei(_balance.toString(), 'ether')
 
+    /**
+     * Determines if the transfer submit button should be disabled
+     * Checks for loading state, valid amount, and sufficient balance
+     * @param {string} amount - Transfer amount
+     * @returns {boolean} Whether submit should be disabled
+     */
     const isSubmitButtonDisabled = (amount: string) => formDetails.loading || amount === '' || amount > formatBalance(balance) || /^[0.]*$/.test(amount)
 
     return (

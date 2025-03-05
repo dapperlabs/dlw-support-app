@@ -18,14 +18,30 @@ import { AuthProps, WalletDetails } from '../../types/auth'
 import { getContract, getCosignerForAuthorized, prepareInvokeData } from '../../utils'
 import { AbiFragment } from 'web3'
 
-// CryptoKitties contracts:
+/**
+ * CryptoKitties contract instances
+ * Pre-initialized with their respective ABIs and addresses
+ */
 const core: Contract<AbiFragment[]> = getContract(Contracts.Core.abi, Contracts.Core.addr)
 const sale: Contract<AbiFragment[]> = getContract(Contracts.Sale.abi, Contracts.Sale.addr)
 const sire: Contract<AbiFragment[]> = getContract(Contracts.Sire.abi, Contracts.Sire.addr)
 
-
+/**
+ * Main application view component
+ * Handles routing, wallet connections, and component rendering based on authentication state
+ * 
+ * @component
+ * @param {AuthProps} props - Authentication related props
+ * @param {Function} props.handleSignIn - Handler for wallet sign in
+ * @param {Function} props.handleSignOut - Handler for wallet sign out
+ * @param {string} props.loggedIn - Current wallet address if logged in
+ * @param {string} props.BASE_URL - Base URL for routing
+ * @param {boolean} props.isDapper - Whether connected wallet is Dapper
+ * @returns {JSX.Element} Main application interface
+ */
 const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: walletAddress, BASE_URL, isDapper }) => {
-    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined)
+    // Component state
+    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined) // Dapper wallet contract
     const [walletDetails, setWalletDetails] = useState<WalletDetails>({
         dapperWallet: undefined,
         dapperWalletInput: '',
@@ -39,6 +55,11 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
         }
     }, [walletAddress])
 
+    /**
+     * Handles changes to wallet detail inputs
+     * @param {React.ChangeEvent<HTMLInputElement>} e - Change event
+     * @param {keyof WalletDetails} changeParam - Wallet detail field to update
+     */
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, changeParam: keyof WalletDetails) => {
         const { value } = e.target
         const newState = { ...walletDetails }
@@ -46,6 +67,11 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
         setWalletDetails(newState)
     }
 
+    /**
+     * Sets up Dapper wallet connection and retrieves cosigner information
+     * @async
+     * @throws {Error} If wallet setup fails
+     */
     const handleSetDapperWallet = async () => {
         try {
             const contract = getContract(dapperWalletAbi, walletDetails.dapperWalletInput)
@@ -58,6 +84,15 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
         }
     }
 
+    /**
+     * Invokes a transaction through the Dapper wallet contract
+     * Handles transaction preparation and execution
+     * @async
+     * @param {string} address - Contract address to interact with
+     * @param {any} method - Contract method to call
+     * @param {string} amount - Transaction value in wei
+     * @throws {Error} If transaction fails
+     */
     const invokeTx = async (address: string, method: any | undefined, amount: string | undefined) => {
         if (typeof walletDetails.dapperWallet === 'string') {
             const contract = getContract(dapperWalletAbi, walletDetails.dapperWallet)
@@ -71,6 +106,10 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
         }
     }
 
+    /**
+     * Checks if current wallet is authorized cosigner
+     * @returns {boolean} Whether wallet is authorized cosigner
+     */
     const isAuthorizedCosignerPair = () => walletDetails.cosigner?.toLowerCase() === walletAddress?.toLowerCase()
 
     if (!walletAddress) {
@@ -131,6 +170,11 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
     )
 }
 
+/**
+ * Utility component that scrolls to top on route changes
+ * @component
+ * @returns {null}
+ */
 const ScrollToTop: React.FC = () => {
     const { pathname } = useLocation()
     useEffect(() => {

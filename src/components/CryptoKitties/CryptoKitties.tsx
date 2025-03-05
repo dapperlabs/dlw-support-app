@@ -3,6 +3,17 @@ import { useEffect, useState } from 'react'
 import { Contract } from 'web3-eth-contract'
 import { AbiFragment } from 'web3'
 
+/**
+ * Interface for managing CryptoKitties transfer and auction form state
+ * @interface FormDetails
+ * @property {string} kittyId - ID of the CryptoKitty or comma-separated IDs
+ * @property {boolean} transferrable - Whether the kitty can be transferred
+ * @property {boolean} forSale - Whether the kitty is in a sale auction
+ * @property {boolean} forSire - Whether the kitty is in a sire auction
+ * @property {boolean} loading - Loading state during operations
+ * @property {boolean} auctionCancelled - Whether auction was successfully cancelled
+ * @property {boolean} transferSuccess - Whether transfer was successful
+ */
 export interface FormDetails {
     kittyId: string,
     transferrable: boolean,
@@ -13,6 +24,19 @@ export interface FormDetails {
     transferSuccess: boolean,
 }
 
+/**
+ * Interface for tracking status of individual CryptoKitties
+ * Used when handling multiple kitties simultaneously
+ * @interface KittyStatus
+ * @property {string} id - ID of the CryptoKitty
+ * @property {boolean} transferrable - Whether the kitty can be transferred
+ * @property {boolean} forSale - Whether the kitty is in a sale auction
+ * @property {boolean} forSire - Whether the kitty is in a sire auction
+ * @property {boolean} loading - Loading state during operations
+ * @property {string} [error] - Error message if operation failed
+ * @property {boolean} [transferSuccess] - Whether transfer was successful
+ * @property {boolean} [auctionCancelled] - Whether auction was cancelled
+ */
 interface KittyStatus {
     id: string;
     transferrable: boolean;
@@ -24,6 +48,20 @@ interface KittyStatus {
     auctionCancelled?: boolean;
 }
 
+/**
+ * Component for managing CryptoKitties transfers and auctions
+ * Supports both single and batch operations for transfers and auction management
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.walletAddress - Address of the recipient wallet
+ * @param {string} props.dapperWalletAddress - Address of the Dapper wallet
+ * @param {Function} props.invokeTx - Function to invoke transfers and auction operations
+ * @param {Contract} props.core - CryptoKitties Core contract instance
+ * @param {Contract} props.sale - CryptoKitties Sale Auction contract instance
+ * @param {Contract} props.sire - CryptoKitties Sire Auction contract instance
+ * @returns {JSX.Element} CryptoKitties management interface
+ */
 const CryptoKitties: React.FC<{ 
     walletAddress: string,
     dapperWalletAddress: string,
@@ -43,11 +81,11 @@ const CryptoKitties: React.FC<{
         transferSuccess: false,
     }
 
-    const [kittyStatuses, setKittyStatuses] = useState<KittyStatus[]>([])
-
-    const [total, setTotal] = useState<number>(0)
-    const [balance, setBalance] = useState<number>(0)
-    const [formDetails, setFormDetails] = useState<FormDetails>(initFormState)
+    // Component state
+    const [kittyStatuses, setKittyStatuses] = useState<KittyStatus[]>([]) // Status for multiple kitties
+    const [total, setTotal] = useState<number>(0) // Total CryptoKitties supply
+    const [balance, setBalance] = useState<number>(0) // User's CryptoKitties balance
+    const [formDetails, setFormDetails] = useState<FormDetails>(initFormState) // Form state
 
     useEffect(() => {
         const getCryptoKittiesBalanceAndTotal = async () => {
@@ -67,6 +105,11 @@ const CryptoKitties: React.FC<{
         }
     }, [formDetails.kittyId])
 
+    /**
+     * Verifies ownership and auction status of a single CryptoKitty
+     * @async
+     * @throws {Error} If ownership check fails
+     */
     const handleCheckOwnership = async () => {
         if (/^\d+$/.test(formDetails.kittyId.trim()) && total && parseInt(formDetails.kittyId.trim(), 10) <= total) {
             const kittyId = formDetails.kittyId.trim()
@@ -97,6 +140,13 @@ const CryptoKitties: React.FC<{
         }
     }
     
+    /**
+     * Checks if a kitty is in an active auction
+     * @async
+     * @param {Contract} auctionContract - Sale or Sire auction contract
+     * @param {string} kittyId - ID of the kitty to check
+     * @returns {Promise<boolean>} Whether kitty is in active auction
+     */
     const checkAuction = async (auctionContract: Contract<AbiFragment[]>, kittyId: string) => {
         try {
             await auctionContract.methods.getAuction(kittyId).call()
@@ -106,6 +156,11 @@ const CryptoKitties: React.FC<{
         }
     }
     
+    /**
+     * Handles cancellation of active sale or sire auctions
+     * @async
+     * @throws {Error} If auction cancellation fails
+     */
     const handleCancelAuction = async () => {
         setFormDetails(prevState => ({ ...prevState, loading: true }))
         const contract = formDetails.forSale ? sale : sire
@@ -121,6 +176,13 @@ const CryptoKitties: React.FC<{
         }
     }
     
+    /**
+     * Handles transfer of a CryptoKitty to recipient wallet
+     * Updates status for both single and batch operations
+     * @async
+     * @param {string} kittyId - ID of the kitty to transfer
+     * @throws {Error} If transfer fails
+     */
     const handleTransfer = async (kittyId: string) => {
         setFormDetails(prevState => ({ ...prevState, loading: true }))
         const address = Contracts['Core'].addr
@@ -148,6 +210,11 @@ const CryptoKitties: React.FC<{
         }
     }
 
+    /**
+     * Handles form input changes and initializes batch operation state
+     * @param {React.ChangeEvent<HTMLInputElement>} e - Change event
+     * @param {keyof FormDetails} changeParam - Form field to update
+     */
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>, changeParam: keyof FormDetails) => {
         const { value } = e.target
         const newState = { ...formDetails }
@@ -179,6 +246,11 @@ const CryptoKitties: React.FC<{
         setFormDetails(newState)
     }
 
+    /**
+     * Checks ownership and auction status for multiple kitties
+     * Updates status for each kitty individually
+     * @async
+     */
     const checkAllKitties = async () => {
         const ids = formDetails.kittyId.split(',').map(id => id.trim()).filter(id => /^\d+$/.test(id));
         for (let i = 0; i < ids.length; i++) {
@@ -222,8 +294,17 @@ const CryptoKitties: React.FC<{
         }
     }
 
+    /**
+     * Formats the CryptoKitties balance for display
+     * Handles singular/plural form
+     * @param {number} balance - Number of kitties owned
+     * @returns {string} Formatted balance string
+     */
     const formatBalance = (balance: number) => balance === 1 ? '1 CryptoKitty' : `${balance} CryptoKitties`
 
+    /**
+     * Resets the form state to initial values
+     */
     const resetForm = () => setFormDetails(initFormState)
 
     return (
@@ -324,7 +405,6 @@ const CryptoKitties: React.FC<{
                 )}
             </div>
         </>
-        
     )
 }
 

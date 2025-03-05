@@ -5,6 +5,16 @@ import { Contract } from 'web3-eth-contract'
 import { abi } from '@openzeppelin/contracts/build/contracts/ERC721.json'
 import { isAddress } from 'web3-validator'
 
+/**
+ * Interface for managing ERC721 NFT transfer form state
+ * @interface FormDetails
+ * @property {string} tokenId - ID of the NFT token to transfer
+ * @property {boolean} transferrable - Whether the token can be transferred (owned by wallet)
+ * @property {string} contractAddress - Address of the ERC721 NFT contract
+ * @property {string} contractAbi - ABI of the NFT contract (optional)
+ * @property {boolean} loading - Loading state during operations
+ * @property {boolean} transferSuccess - Indicates if transfer was successful
+ */
 export interface FormDetails {
     tokenId: string,
     transferrable: boolean,
@@ -12,26 +22,39 @@ export interface FormDetails {
     contractAbi: string,
     loading: boolean,
     transferSuccess: boolean,
+    transferTo: string,
 }
 
-const initFormState = {
+const initFormState = (walletAddress: string) => ({
     tokenId: '',
     transferrable: false,
     loading: false,
     contractAddress: '',
     contractAbi: '',
     transferSuccess: false,
-}
+    transferTo: walletAddress
+})
 
+/**
+ * Component for handling ERC721 NFT transfers
+ * Supports standard ERC721 NFTs with ownership verification
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.walletAddress - Address of the recipient wallet
+ * @param {string} props.dapperWalletAddress - Address of the Dapper wallet
+ * @param {Function} props.invokeTx - Function to invoke NFT transfer
+ * @returns {JSX.Element} ERC721 NFT transfer interface
+ */
 const ERC721: React.FC<{ 
     walletAddress: string,
     dapperWalletAddress: string,
     invokeTx: (address: string, method: any, amount: string | undefined) => Promise<void>,
 }> = ({ walletAddress, dapperWalletAddress, invokeTx }) => {
-
-    const [balance, setBalance] = useState<number>(0)
-    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined)
-    const [formDetails, setFormDetails] = useState<FormDetails>(initFormState)
+    // Component state
+    const [balance, setBalance] = useState<number>(0) // Number of NFTs owned
+    const [contract, setContract] = useState<Contract<AbiFragment[]> | undefined>(undefined) // ERC721 contract instance
+    const [formDetails, setFormDetails] = useState<FormDetails>(initFormState(walletAddress)) // Form state
 
     useEffect(() => {
         if (formDetails.transferrable) {
@@ -39,6 +62,10 @@ const ERC721: React.FC<{
         }
     }, [formDetails.tokenId])
 
+    /**
+     * Fetches the total NFT balance for the Dapper wallet address
+     * @async
+     */
     const getTokenBalance = async () => {
         if (contract) {
             const _balance = await contract.methods.balanceOf(dapperWalletAddress).call()
@@ -54,6 +81,12 @@ const ERC721: React.FC<{
         }
     }, [contract])
 
+    /**
+     * Initializes the ERC721 contract instance with provided address and ABI
+     * Falls back to standard ERC721 ABI if no custom ABI provided
+     * @async
+     * @throws {Error} If contract initialization fails
+     */
     const handleSetContract = async () => {
         if (isAddress(formDetails.contractAddress)) {
             try {
@@ -66,6 +99,12 @@ const ERC721: React.FC<{
         }
     }
 
+    /**
+     * Verifies if the specified token ID is owned by the Dapper wallet
+     * Sets transferrable state if ownership is confirmed
+     * @async
+     * @throws {Error} If ownership check fails
+     */
     const handleCheckOwnership = async () => {
         if (/^\d+$/.test(formDetails.tokenId.trim()) && contract) {
             setFormDetails(prevState => ({ ...prevState, loading: true }))
@@ -87,10 +126,16 @@ const ERC721: React.FC<{
         }
     }
     
+    /**
+     * Handles NFT transfer from Dapper wallet to recipient
+     * Uses safeTransferFrom to ensure safe NFT transfer
+     * @async
+     * @throws {Error} If transfer fails
+     */
     const handleTransfer = async () => {
         setFormDetails(prevState => ({ ...prevState, loading: true }))
         if (contract) {
-            const methodCall = contract.methods.safeTransferFrom(dapperWalletAddress, walletAddress, formDetails.tokenId)
+            const methodCall = contract.methods.safeTransferFrom(dapperWalletAddress, formDetails.transferTo, formDetails.tokenId)
             try {
                 await invokeTx(formDetails.contractAddress, methodCall, '0')
                 setFormDetails(prevState => ({ ...prevState, transferrable: false, transferSuccess: true }))
@@ -102,18 +147,27 @@ const ERC721: React.FC<{
         }
     }
 
+    /**
+     * Handles form input changes
+     * Updates form state while maintaining type safety
+     * @param {React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>} e - Change event
+     * @param {keyof FormDetails} changeParam - Form field to update
+     */
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>,
         changeParam: keyof FormDetails
     ) => {
         const { value } = e.target
         const newState = { ...formDetails }
-        if (changeParam === 'tokenId' || changeParam === 'contractAddress' || changeParam === 'contractAbi') {
+        if (changeParam === 'tokenId' || changeParam === 'contractAddress' || changeParam === 'transferTo' || changeParam === 'contractAbi') {
             newState[changeParam] = value
         }
         setFormDetails(newState)
     }
 
+    /**
+     * Resets the form state to initial values
+     */
     const resetForm = () => setFormDetails(initFormState)
 
     return (
@@ -150,15 +204,30 @@ const ERC721: React.FC<{
                             <button onClick={resetForm}>{`Reset form`}</button>
                         </>
                     ) : (
-                        <label htmlFor={'tokenId'}>
-                            {`token id:`} 
-                            <input id={'tokenId'} type={'text'} className={'tokenId'} value={formDetails.tokenId} onChange={e => handleChange(e, 'tokenId')} disabled={formDetails.loading} />
+                        <>
+                            <label htmlFor={'tokenId'}>
+                                {`token id:`} 
+                                <input id={'tokenId'} type={'text'} className={'tokenId'} value={formDetails.tokenId} onChange={e => handleChange(e, 'tokenId')} disabled={formDetails.loading} />
+                            </label>
+                            {formDetails.transferrable && (
+                                <label htmlFor={'transferTo'}>
+                                    {'transfer to:'}
+                                    <input
+                                        id={'transferTo'}
+                                        type='text'
+                                        value={formDetails.transferTo}
+                                        onChange={(e) => handleChange(e, 'transferTo')}
+                                        disabled={formDetails.loading}
+                                    />
+                                </label>
+                            
+                            )}
                             {formDetails.transferrable ? (
                                 <button onClick={handleTransfer} disabled={formDetails.loading}>{`transfer token #${formDetails.tokenId}`}</button>
                             ) : (
                                 <button onClick={handleCheckOwnership} disabled={formDetails.loading}>{'check ownership'}</button>
                             )}
-                        </label>
+                        </>
                     )}
                 </>
             )}

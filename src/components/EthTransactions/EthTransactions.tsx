@@ -1,17 +1,39 @@
 import { useState } from 'react'
 import { utils } from 'web3'
 
+/**
+ * Props for the EthTransactions component
+ * @interface EthTransactionsProps
+ * @property {string} walletAddress - The address of the current wallet
+ * @property {Function} invokeTx - Function to invoke an Ethereum transaction
+ */
 interface EthTransactionsProps {
     walletAddress: string
     invokeTx: (address: string, method: any | undefined, amount: string | undefined) => Promise<void>
 }
 
+/**
+ * Component for handling Ethereum transfers between wallets
+ * Provides interface for sending ETH from Dapper wallet to other addresses
+ * 
+ * @component
+ * @param {EthTransactionsProps} props - Component props
+ * @returns {JSX.Element} Ethereum transfer interface
+ */
 const EthTransactions: React.FC<EthTransactionsProps> = ({ walletAddress, invokeTx }) => {
-    const [recipient, setRecipient] = useState<string>(walletAddress)
+    // Transaction form state
+    const [recipient, setRecipient] = useState<string>(walletAddress) // Recipient wallet address
     const [amount, setAmount] = useState<string>('') // Amount in ETH as string to handle decimals
-    const [loading, setLoading] = useState<boolean>(false)
-    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+    const [loading, setLoading] = useState<boolean>(false) // Loading state during transaction
+    const [successMessage, setSuccessMessage] = useState<string | null>(null) // Success message after transaction
 
+    /**
+     * Handles ETH transfer transaction
+     * Converts ETH amount to Wei and invokes the transaction
+     * 
+     * @async
+     * @throws {Error} If the transaction fails
+     */
     const handleTransfer = async () => {
         setLoading(true)
         setSuccessMessage(null)

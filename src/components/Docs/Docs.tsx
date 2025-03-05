@@ -1,5 +1,16 @@
 import React from 'react'
 
+/**
+ * Documentation component that provides user instructions
+ * Explains the process of setting up and managing Dapper Legacy wallet authorizations
+ * Includes step-by-step guide for:
+ * 1. Adding new authorized addresses using Dapper wallet
+ * 2. Setting up wallet connections using Metamask
+ * 3. Managing wallet permissions and cosigner relationships
+ * 
+ * @component
+ * @returns {JSX.Element} Documentation and instructions interface
+ */
 const Docs: React.FC = () => {
     return (
         <>
