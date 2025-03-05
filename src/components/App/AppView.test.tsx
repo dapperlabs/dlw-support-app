@@ -1,7 +1,7 @@
 import { expect, test, beforeEach, vi } from 'vitest'
 import { render, fireEvent, act, waitFor } from '@testing-library/react'
 import AppView from './AppView'
-import { getCosignerForAuthorized } from '../../utils'
+import { BASE_URL, getCosignerForAuthorized } from '../../utils'
 
 // Mock the getContract function and other necessary utilities
 vi.mock('../../utils', () => {
@@ -46,7 +46,7 @@ test('renders AppView without wallet address', () => {
             handleSignOut={mockHandleSignOut} 
             loggedIn={undefined} 
             isDapper={false}
-            BASE_URL={'/'}
+            BASE_URL={BASE_URL}
         />
     )
     expect(getByText('How to use this app')).toBeTruthy()

@@ -18,7 +18,7 @@ const Docs: React.FC = () => {
     return (
         <Styled.Div>
             <Styled.Section>
-                <h1>How to Use This App</h1>
+                <h1>How to use this app</h1>
                 <Styled.Notice>
                     <h3>⚠️ Important Security Notice</h3>
                     <p>

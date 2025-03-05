@@ -2,6 +2,8 @@ import Web3 from 'web3'
 import BN from 'bn.js'
 import { AbiItem } from 'web3'
 
+export const BASE_URL = '/dlw-support-app/'
+
 /**
  * Web3 instance initialized with the current Ethereum provider
  * Used for all blockchain interactions and data conversions

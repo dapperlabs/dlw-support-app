@@ -51,6 +51,10 @@ vi.mock('../../utils', () => ({
 // Mock invokeTx method
 const mockInvokeTx = vi.fn()
 
+// Mock ethereum wallet addresses
+const USER = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
+const DAPPERWALLET = '0x123d35Cc6634C0532925a3b844Bc454e4438f123'
+
 const contracts = {
     core: getContract(Contracts.Core.abi, Contracts.Core.addr),
     sale: getContract(Contracts.Sale.abi, Contracts.Sale.addr),
@@ -63,7 +67,7 @@ beforeEach(() => {
 })
 
 test('renders CryptoKitties component', async () => {
-    const { getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(() => {
         const titleElement = getByText('CryptoKitties')
         expect(titleElement).toBeTruthy()
@@ -71,7 +75,7 @@ test('renders CryptoKitties component', async () => {
 })
 
 test('handles ownership check for a valid kitty ID', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
@@ -83,7 +87,7 @@ test('handles ownership check for a valid kitty ID', async () => {
 })
 
 test('transfers kitty and display success message + reset form c2a', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
@@ -93,7 +97,7 @@ test('transfers kitty and display success message + reset form c2a', async () =>
         await act(async () => {
             fireEvent.click(c2a)
         })
-        const methodCall = contracts.core.methods.transfer('0x123', '1')
+        const methodCall = contracts.core.methods.transfer(USER, '1')
         expect(mockInvokeTx).toHaveBeenCalledWith(Contracts.Core.addr, methodCall, '0x0'),
         expect(getByText(/Transfer method invoked for Kitty ID: #1/i)).toBeTruthy()
         expect(getByText(/Reset form/i)).toBeTruthy()
@@ -101,7 +105,7 @@ test('transfers kitty and display success message + reset form c2a', async () =>
 })
 
 test('updates tokenId in formDetails on change', async () => {
-    const { getByLabelText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await act(async () => {
         fireEvent.change(getByLabelText(/kitty id:/i), { target: { value: '2' } })
     })
@@ -110,7 +114,7 @@ test('updates tokenId in formDetails on change', async () => {
 })
 
 test('resets transferrable state when tokenId changes', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText(/kitty id:/i), { target: { value: '1' } })
@@ -125,7 +129,7 @@ test('resets transferrable state when tokenId changes', async () => {
 })
 
 test('checks sale and sire auctions if ownership check was false', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x567" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
@@ -138,7 +142,7 @@ test('checks sale and sire auctions if ownership check was false', async () => {
 })
 
 test('shows cancel sale auction c2a if sale auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x567" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '2' } })
@@ -150,7 +154,7 @@ test('shows cancel sale auction c2a if sale auction was found', async () => {
 })
 
 test('shows cancel sire auction c2a if sire auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x567" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '3' } })
@@ -162,7 +166,7 @@ test('shows cancel sire auction c2a if sire auction was found', async () => {
 })
 
 test('user can cancel a sale auction if sale auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x567" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '2' } })
@@ -177,7 +181,7 @@ test('user can cancel a sale auction if sale auction was found', async () => {
 })
 
 test('user can cancel a sire auction if sire auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x567" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '3' } })
@@ -192,7 +196,7 @@ test('user can cancel a sire auction if sire auction was found', async () => {
 })
 
 test('shows alert if there is an error during ownership check', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText(/kitty id:/i), { target: { value: '99' } }) // pass in this tokenId to mock an error
@@ -203,7 +207,7 @@ test('shows alert if there is an error during ownership check', async () => {
 })
 
 test('shows alert if there was an error while cancelling auction', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x567" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '3' } })
@@ -218,7 +222,7 @@ test('shows alert if there was an error while cancelling auction', async () => {
 })
 
 test('shows alert if there was an error during transfer', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(async () => {
         await act(async () => {
             fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
@@ -233,7 +237,7 @@ test('shows alert if there was an error during transfer', async () => {
 })
 
 test('shows alert for invalid Kitty ID', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress="0x123" dapperWalletAddress="0x456" invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await act(async () => {
         fireEvent.change(getByLabelText('kitty id:'), { target: { value: '101' } }) // Note this is 1 more than the mocked totalSupply return value 100
         fireEvent.click(getByText('check ownership'))
