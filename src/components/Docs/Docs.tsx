@@ -69,36 +69,6 @@ const Docs: React.FC = () => {
                 </Styled.StepContent>
             </Styled.Section>
 
-            <Styled.Section>
-                <h2>Troubleshooting</h2>
-                <Styled.FAQ>
-                    <details>
-                        <summary>Transaction Failed</summary>
-                        <ul>
-                            <li>Verify you have sufficient ETH for gas</li>
-                            <li>Ensure you're on Ethereum Mainnet</li>
-                            <li>Try increasing gas price slightly</li>
-                        </ul>
-                    </details>
-                    <details>
-                        <summary>Authorization Not Showing</summary>
-                        <ul>
-                            <li>Confirm you're using the correct Dapper wallet address</li>
-                            <li>Wait for transaction confirmation (may take a few minutes)</li>
-                            <li>Try refreshing the page</li>
-                        </ul>
-                    </details>
-                    <details>
-                        <summary>Wallet Connection Issues</summary>
-                        <ul>
-                            <li>Ensure only one wallet extension is active</li>
-                            <li>Clear browser cache and reload</li>
-                            <li>Check network connection</li>
-                        </ul>
-                    </details>
-                </Styled.FAQ>
-            </Styled.Section>
-
             {/* <Styled.Section>
                 <h2>Additional Options</h2>
                 <p>

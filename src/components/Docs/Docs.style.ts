@@ -12,7 +12,7 @@ export const Section = styled.section`
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    h2, h3, details, summary {
+    h2, h3 {
         margin-bottom: 14px; 
     }
 `
@@ -46,8 +46,4 @@ export const Warning = styled.div`
     border-radius: 4px;
     color: #cc0000;
     font-weight: 500;
-`
-
-export const FAQ = styled.div`
-    margin-top: 15px;
 `

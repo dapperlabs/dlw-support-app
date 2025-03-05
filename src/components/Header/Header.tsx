@@ -8,7 +8,8 @@ const Header: React.FC<AuthProps> = ({ loggedIn, handleSignIn, handleSignOut, is
             <h1>
                 <Link to={'/'}>
                     <img src={`${BASE_URL}/dapper-wallet.png`} alt="Dapper Labs" />
-                    {'Dapper Legacy Wallet Support App'}
+                    <span>{'Dapper Legacy Wallet Support App'}</span>
+                    <span className={'mobile'}>{'DLW Support App'}</span>
                 </Link>
             </h1>
             {loggedIn ? (

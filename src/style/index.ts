@@ -20,6 +20,20 @@ export const Header = styled.header`
                 width: 48px;
                 margin-right: 16px;
             }
+            > span {
+                font-size: 18px;
+                display: none;
+                @media (min-width: ${breaks['md']}) {
+                    font-size: 24px;
+                    display: inline;
+                }
+                &.mobile {
+                    display: inline;
+                    @media (min-width: ${breaks['md']}) {
+                        display: none;
+                    }
+                } 
+            }
         }
     }
     > button {
@@ -114,6 +128,7 @@ export const Main = styled.main`
         width: 100%;
         font-size: ${fontSize['lg']};
         margin-bottom: ${gutters['md']};
+        box-sizing: border-box;
     }
     input[type='text'], textarea {
         max-width: 620px;
