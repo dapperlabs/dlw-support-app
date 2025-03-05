@@ -210,7 +210,7 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
                             </Styled.Header>
                             <hr />
                             <Styled.Main>
-                                <Docs {...{ BASE_URL }} />
+                                <Docs />
                             </Styled.Main>
                         </>
                     } />

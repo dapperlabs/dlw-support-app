@@ -14,7 +14,7 @@ import * as Styled from './Docs.style'
  * @component
  * @returns {JSX.Element} Documentation and instructions interface
  */
-const Docs: React.FC<{ BASE_URL: string }> = ({ BASE_URL }) => {
+const Docs: React.FC = () => {
     return (
         <Styled.Div>
             <Styled.Section>
