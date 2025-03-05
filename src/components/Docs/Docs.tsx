@@ -85,7 +85,7 @@ const Docs: React.FC = () => {
             <Styled.Section>
                 <h2>Need Help?</h2>
                 <p>
-                    If you encounter issues not covered in the troubleshooting Styled.Section, please:
+                    If you encounter issues not covered in the troubleshooting section, please:
                 </p>
                 <ul>
                     <li>Document the exact steps that led to the issue</li>
