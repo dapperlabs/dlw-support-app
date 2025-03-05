@@ -202,7 +202,7 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
         return (
             <Router basename={BASE_URL}>
                 <Routes>
-                    <Route path="*" element={<Navigate to={BASE_URL} replace />} />
+                    <Route path="*" element={<Navigate to={'/'} replace />} />
                     <Route path="/" element={
                         <>  
                             <Styled.Header>
