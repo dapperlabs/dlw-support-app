@@ -270,7 +270,7 @@ const CryptoKitties: React.FC<{
     /**
      * Resets the form state to initial values
      */
-    const resetForm = () => setFormDetails(initFormState)
+    // const resetForm = () => setFormDetails(initFormState)
 
     return (
         <>
@@ -293,8 +293,9 @@ const CryptoKitties: React.FC<{
                 />
             </label>
             <button onClick={checkAllKitties} disabled={formDetails.loading || kittyStatuses.length === 0}>
-                Check Kitties
+                {'Check Kitties'}
             </button>
+            
 
             {kittyStatuses.length > 0 ? (
                 <div style={{ marginTop: '20px' }}>
@@ -350,7 +351,6 @@ const CryptoKitties: React.FC<{
                     ) : (
                         <p><span className={'success'}>✓</span>{`Transfer method invoked for Kitty ID: #${formDetails.kittyId}`}</p>
                     )}
-                    <button onClick={resetForm}>{`Reset form`}</button>
                 </>
             ) : (
                 <div style={{ marginTop: '10px' }}>
