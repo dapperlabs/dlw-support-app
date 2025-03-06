@@ -13,6 +13,7 @@ import { AbiFragment } from 'web3'
  * @property {boolean} loading - Loading state during operations
  * @property {boolean} auctionCancelled - Whether auction was successfully cancelled
  * @property {boolean} transferSuccess - Whether transfer was successful
+ * @property {string} [error] - Error message if operation failed
  */
 export interface FormDetails {
     kittyId: string,
@@ -22,6 +23,7 @@ export interface FormDetails {
     loading: boolean,
     auctionCancelled: boolean,
     transferSuccess: boolean,
+    error?: string,
 }
 
 /**
@@ -62,7 +64,7 @@ interface KittyStatus {
  * @param {Contract} props.sire - CryptoKitties Sire Auction contract instance
  * @returns {JSX.Element} CryptoKitties management interface
  */
-const CryptoKitties: React.FC<{ 
+const CryptoKitties: React.FC<{
     walletAddress: string,
     dapperWalletAddress: string,
     invokeTx: (address: string, method: any, amount: string | undefined) => Promise<void>,
@@ -71,7 +73,7 @@ const CryptoKitties: React.FC<{
     sire: Contract<AbiFragment[]>,
 }> = ({ walletAddress, dapperWalletAddress, invokeTx, core, sale, sire }) => {
 
-    const initFormState = {
+    const initFormState: FormDetails = {
         kittyId: '',
         transferrable: false,
         forSire: false,
@@ -79,6 +81,7 @@ const CryptoKitties: React.FC<{
         loading: false,
         auctionCancelled: false,
         transferSuccess: false,
+        error: undefined,
     }
 
     // Component state
@@ -100,11 +103,17 @@ const CryptoKitties: React.FC<{
     }, [])
 
     useEffect(() => {
-        if (formDetails.transferrable || formDetails.forSire || formDetails.forSale) {
-            setFormDetails(prevState => ({ ...prevState, transferrable: false, forSale: false, forSire: false }))
+        if (formDetails.transferrable || formDetails.forSire || formDetails.forSale || formDetails.error) {
+            setFormDetails(prevState => ({
+                ...prevState,
+                transferrable: false,
+                forSale: false,
+                forSire: false,
+                error: undefined
+            }))
         }
     }, [formDetails.kittyId])
-    
+
     /**
      * Checks if a kitty is in an active auction
      * @async
@@ -120,27 +129,32 @@ const CryptoKitties: React.FC<{
             return false
         }
     }
-    
+
     /**
      * Handles cancellation of active sale or sire auctions
      * @async
      * @throws {Error} If auction cancellation fails
      */
-    const handleCancelAuction = async (isSaleAuction: boolean) => {
+    const handleCancelAuction = async (isSaleAuction: boolean, tokenId: string) => {
         setFormDetails(prevState => ({ ...prevState, loading: true }))
         const contract = isSaleAuction ? sale : sire
         const address = isSaleAuction ? Contracts['Sale'].addr : Contracts['Sire'].addr
-        const methodCall = contract.methods.cancelAuction(formDetails.kittyId.toString())
+        const methodCall = contract.methods.cancelAuction(tokenId)
         try {
             await invokeTx(address, methodCall, '0')
             setFormDetails(prevState => ({ ...prevState, forSale: false, forSire: false, auctionCancelled: true }))
+            setKittyStatuses(prev => prev.map(s =>
+                s.id === tokenId ? { ...s, auctionCancelled: true } : s
+            ));
         } catch (e) {
-            alert('Failed to cancel auction. Please try again.')
+            setKittyStatuses(prev => prev.map(s =>
+                s.id === tokenId ? { ...s, error: 'Failed to cancel auction. Please try again.' } : s
+            ));
         } finally {
             setFormDetails(prevState => ({ ...prevState, loading: false }))
         }
     }
-    
+
     /**
      * Handles transfer of a CryptoKitty to recipient wallet
      * Updates status for both single and batch operations
@@ -155,21 +169,14 @@ const CryptoKitties: React.FC<{
         try {
             await invokeTx(address, methodCall, '0')
             if (kittyStatuses.length > 0) {
-                setKittyStatuses(prev => prev.map(s => 
+                setKittyStatuses(prev => prev.map(s =>
                     s.id === kittyId ? { ...s, transferSuccess: true } : s
                 ))
             } else {
                 setFormDetails(prevState => ({ ...prevState, transferrable: false, transferSuccess: true }))
             }
         } catch (e) {
-            console.log(e)
-            if (kittyStatuses.length > 0) {
-                setKittyStatuses(prev => prev.map(s => 
-                    s.id === kittyId ? { ...s, error: 'Failed to transfer. Please try again.' } : s
-                ))
-            } else {
-                alert('Failed to transfer. Please try again.')
-            }
+            setFormDetails(prev => ({ ...prev, error: 'Failed to transfer. Please try again.' }));
         } finally {
             setFormDetails(prevState => ({ ...prevState, loading: false }))
         }
@@ -185,10 +192,10 @@ const CryptoKitties: React.FC<{
         const newState = { ...formDetails }
         if (changeParam === 'kittyId') {
             newState.kittyId = value
-            
+
             // Clear existing statuses when input changes
             setKittyStatuses([])
-            
+
             // If input contains commas, treat as multiple IDs
             const ids = value.split(',').map(id => id.trim()).filter(id => id !== '');
             if (ids.length > 0) {
@@ -197,7 +204,7 @@ const CryptoKitties: React.FC<{
                 if (validIds.length !== ids.length) {
                     alert('Some kitty IDs were invalid and will be ignored');
                 }
-                
+
                 // Initialize statuses for valid IDs
                 setKittyStatuses(validIds.map(id => ({
                     id,
@@ -220,39 +227,39 @@ const CryptoKitties: React.FC<{
         const ids = formDetails.kittyId.split(',').map(id => id.trim()).filter(id => /^\d+$/.test(id));
         for (let i = 0; i < ids.length; i++) {
             const kittyId = ids[i];
-            setKittyStatuses(prev => prev.map(status => 
-                status.id === kittyId ? { ...status, loading: true } : status
+            setKittyStatuses(prev => prev.map(status =>
+                status.id === kittyId ? { ...status, loading: true, error: undefined } : status
             ));
 
             try {
                 const owner = await core.methods.ownerOf(kittyId).call();
                 if (owner && owner.toString().toLowerCase() === dapperWalletAddress.toLowerCase()) {
-                    setKittyStatuses(prev => prev.map(status => 
+                    setKittyStatuses(prev => prev.map(status =>
                         status.id === kittyId ? { ...status, transferrable: true, loading: false } : status
                     ));
                     continue;
                 }
 
                 const isInSaleAuction = await checkAuction(sale, kittyId);
-                
+
                 if (isInSaleAuction) {
-                    setKittyStatuses(prev => prev.map(status => 
+                    setKittyStatuses(prev => prev.map(status =>
                         status.id === kittyId ? { ...status, forSale: true, loading: false } : status
                     ));
                 } else {
                     const isInSireAuction = await checkAuction(sire, kittyId);
                     if (isInSireAuction) {
-                        setKittyStatuses(prev => prev.map(status => 
+                        setKittyStatuses(prev => prev.map(status =>
                             status.id === kittyId ? { ...status, forSire: true, loading: false } : status
                         ));
                     } else {
-                        setKittyStatuses(prev => prev.map(status => 
+                        setKittyStatuses(prev => prev.map(status =>
                             status.id === kittyId ? { ...status, loading: false, error: 'Not owned by this Dapper Wallet' } : status
                         ));
                     }
                 }
             } catch (error) {
-                setKittyStatuses(prev => prev.map(status => 
+                setKittyStatuses(prev => prev.map(status =>
                     status.id === kittyId ? { ...status, loading: false, error: 'An error occurred while checking ownership.' } : status
                 ));
             }
@@ -280,14 +287,14 @@ const CryptoKitties: React.FC<{
             <p>{`Enter a CryptoKitty id from your Dapper Wallet to check if the kitty can be transferred.`}</p>
             <p>{`If the kitty is currently for sale or sire you will be prompted to cancel the auction.`}</p>
             <p>{`If you cancel the auction (assuming you created it) you will then be able to transfer the kitty.`}</p>
-            
+
             <label htmlFor='tokenIds'>
                 {'Enter a CryptoKitty ID or multiple IDs separated by commas:'}
                 <input
                     id={'tokenIds'}
-                    type={'text'} 
-                    value={formDetails.kittyId} 
-                    onChange={e => handleChange(e, 'kittyId')} 
+                    type={'text'}
+                    value={formDetails.kittyId}
+                    onChange={e => handleChange(e, 'kittyId')}
                     disabled={formDetails.loading}
                     placeholder="Example: 123 or 123,456,789"
                 />
@@ -295,7 +302,7 @@ const CryptoKitties: React.FC<{
             <button onClick={checkAllKitties} disabled={formDetails.loading || kittyStatuses.length === 0}>
                 {'Check Kitties'}
             </button>
-            
+
 
             {kittyStatuses.length > 0 ? (
                 <div style={{ marginTop: '20px' }}>
@@ -313,26 +320,23 @@ const CryptoKitties: React.FC<{
                             ) : (
                                 <div>
                                     {status.transferrable && (
-                                        <button 
-                                            onClick={() => handleTransfer(status.id)}
+                                        <button
+                                            onClick={async () => await handleTransfer(status.id)}
                                             disabled={formDetails.loading}
                                         >
                                             Transfer Kitty
                                         </button>
                                     )}
                                     {(status.forSale || status.forSire) && (
-                                        <button 
-                                            onClick={() => {
-                                                setFormDetails(prev => ({ 
-                                                    ...prev, 
+                                        <button
+                                            onClick={async () => {
+                                                setFormDetails(prev => ({
+                                                    ...prev,
                                                     kittyId: status.id,
                                                     forSale: status.forSale,
-                                                    forSire: status.forSire
+                                                    forSire: status.forSire,
                                                 }));
-                                                handleCancelAuction(status.forSale);
-                                                setKittyStatuses(prev => prev.map(s => 
-                                                    s.id === status.id ? { ...s, auctionCancelled: true } : s
-                                                ));
+                                                await handleCancelAuction(status.forSale, status.id);
                                             }}
                                             disabled={formDetails.loading}
                                         >
@@ -344,21 +348,33 @@ const CryptoKitties: React.FC<{
                         </div>
                     ))}
                 </div>
-            ) : formDetails.auctionCancelled || formDetails.transferSuccess ? (
-                <>
-                    {formDetails.auctionCancelled ? (
+            ) : formDetails.auctionCancelled || formDetails.transferSuccess || formDetails.error ? (
+                <div>
+                    {formDetails.error ? (
+                        <p className="error">{formDetails.error}</p>
+                    ) : formDetails.auctionCancelled ? (
                         <p><span className={'success'}>✓</span>{`Cancel auction method invoked for Kitty ID: #${formDetails.kittyId}`}</p>
                     ) : (
                         <p><span className={'success'}>✓</span>{`Transfer method invoked for Kitty ID: #${formDetails.kittyId}`}</p>
                     )}
-                </>
+                </div>
             ) : (
                 <div style={{ marginTop: '10px' }}>
                     {formDetails.transferrable && (
-                        <button onClick={() => handleTransfer(formDetails.kittyId)} disabled={formDetails.loading}>{`transfer kitty #${formDetails.kittyId}`}</button>
+                        <button
+                            onClick={async () => await handleTransfer(formDetails.kittyId)}
+                            disabled={formDetails.loading}
+                        >
+                            {`transfer kitty #${formDetails.kittyId}`}
+                        </button>
                     )}
                     {(formDetails.forSale || formDetails.forSire) && (
-                        <button onClick={() => handleCancelAuction(formDetails.forSale)} disabled={formDetails.loading}>{`cancel ${formDetails.forSale ? 'sale' : 'sire'} auction`}</button>
+                        <button
+                            onClick={async () => await handleCancelAuction(formDetails.forSale, formDetails.kittyId)}
+                            disabled={formDetails.loading}
+                        >
+                            {`cancel ${formDetails.forSale ? 'sale' : 'sire'} auction`}
+                        </button>
                     )}
                 </div>
             )}
