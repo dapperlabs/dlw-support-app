@@ -126,10 +126,10 @@ const CryptoKitties: React.FC<{
      * @async
      * @throws {Error} If auction cancellation fails
      */
-    const handleCancelAuction = async () => {
+    const handleCancelAuction = async (isSaleAuction: boolean) => {
         setFormDetails(prevState => ({ ...prevState, loading: true }))
-        const contract = formDetails.forSale ? sale : sire
-        const address = formDetails.forSale ? Contracts['Sale'].addr : Contracts['Sire'].addr
+        const contract = isSaleAuction ? sale : sire
+        const address = isSaleAuction ? Contracts['Sale'].addr : Contracts['Sire'].addr
         const methodCall = contract.methods.cancelAuction(formDetails.kittyId.toString())
         try {
             await invokeTx(address, methodCall, '0')
@@ -253,7 +253,7 @@ const CryptoKitties: React.FC<{
                 }
             } catch (error) {
                 setKittyStatuses(prev => prev.map(status => 
-                    status.id === kittyId ? { ...status, loading: false, error: 'Error checking ownership' } : status
+                    status.id === kittyId ? { ...status, loading: false, error: 'An error occurred while checking ownership.' } : status
                 ));
             }
         }
@@ -328,7 +328,7 @@ const CryptoKitties: React.FC<{
                                                     forSale: status.forSale,
                                                     forSire: status.forSire
                                                 }));
-                                                handleCancelAuction();
+                                                handleCancelAuction(status.forSale);
                                                 setKittyStatuses(prev => prev.map(s => 
                                                     s.id === status.id ? { ...s, auctionCancelled: true } : s
                                                 ));
@@ -358,7 +358,7 @@ const CryptoKitties: React.FC<{
                         <button onClick={() => handleTransfer(formDetails.kittyId)} disabled={formDetails.loading}>{`transfer kitty #${formDetails.kittyId}`}</button>
                     )}
                     {(formDetails.forSale || formDetails.forSire) && (
-                        <button onClick={handleCancelAuction} disabled={formDetails.loading}>{`cancel ${formDetails.forSale ? 'sale' : 'sire'} auction`}</button>
+                        <button onClick={() => handleCancelAuction(formDetails.forSale)} disabled={formDetails.loading}>{`cancel ${formDetails.forSale ? 'sale' : 'sire'} auction`}</button>
                     )}
                 </div>
             )}

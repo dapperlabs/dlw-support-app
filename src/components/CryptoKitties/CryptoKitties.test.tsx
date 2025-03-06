@@ -318,6 +318,11 @@ test('successfully cancels sale auction when cancel button is clicked', async ()
         fireEvent.click(getByText('Check Kitties'))
     })
 
+    await waitFor(() => {
+        expect(contracts.sale.methods.getAuction).toHaveBeenCalledWith('2')
+        expect(getByText(/Cancel Sale Auction/i)).toBeTruthy()
+    })
+
     await act(async () => {
         fireEvent.click(getByText(/Cancel Sale Auction/i))
     })
@@ -329,7 +334,7 @@ test('successfully cancels sale auction when cancel button is clicked', async ()
 })
 
 test('successfully cancels sire auction when cancel button is clicked', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={OTHER_DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     
     // Wait for total supply to be set
     await waitFor(() => {
@@ -379,11 +384,11 @@ test('shows error alert when ownership check fails for kitty ID', async () => {
         fireEvent.click(getByText('Check Kitties'))
     })
 
-    expect(window.alert).toHaveBeenCalledWith('An error occurred while checking ownership.')
+    expect(getByText('An error occurred while checking ownership.')).toBeTruthy()
 })
 
 test('shows error alert when auction cancellation fails', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={OTHER_DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     
     // Wait for total supply to be set
     await waitFor(() => {
@@ -437,7 +442,8 @@ test('shows error alert when kitty transfer fails', async () => {
         fireEvent.click(getByText('Transfer Kitty'))
     })
 
-    expect(window.alert).toHaveBeenCalledWith('Failed to transfer. Please try again.')
+    expect(getByText('Failed to transfer. Please try again.')).toBeTruthy()
+
 })
 
 test('shows alert when user enters non-numeric or out-of-range kitty ID', async () => {

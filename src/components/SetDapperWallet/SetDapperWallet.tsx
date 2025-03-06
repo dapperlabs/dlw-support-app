@@ -44,7 +44,7 @@ const SetDapperWallet: React.FC<Props> = ({ walletAddress, walletDetails, handle
                     </label>
                     <button
                         onClick={handleSave}
-                        disabled={!isAddress(walletDetails.dapperWalletInput)}
+                        disabled={!isAddress(walletDetails.dapperWalletInput) || walletDetails.dapperWalletInput === ''}
                     >
                         Set Dapper Wallet
                     </button>
