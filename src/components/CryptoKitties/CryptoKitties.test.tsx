@@ -1,21 +1,65 @@
+/**
+ * CryptoKitties Component Tests
+ * 
+ * This test suite verifies the functionality of the CryptoKitties component, which allows users to:
+ * - View and manage their CryptoKitties NFTs
+ * - Transfer owned kitties to an ETH wallet
+ * - Cancel active sale/sire auctions
+ * 
+ * Mock Setup:
+ * - ETH_WALLET: Represents the destination wallet for transfers
+ * - DAPPERWALLET: The user's Dapper wallet, owns kitties with IDs other than 1,2,3
+ * - OTHER_DAPPERWALLET: Another wallet that owns kitties with IDs 1,2,3
+ * 
+ * Contract Mocks:
+ * - Core: Handles ownership checks and transfers
+ * - Sale: Manages sale auctions (mocked for kitty #2)
+ * - Sire: Manages breeding auctions (mocked for kitty #3)
+ * 
+ * Error Cases:
+ * - Kitty #99: Triggers ownership check error
+ * - IDs > 100 or non-numeric: Invalid kitty IDs
+ * - Failed transfers and auction cancellations
+ */
+
 import { expect, test, beforeEach, vi } from 'vitest'
 import { render, fireEvent, act, waitFor } from '@testing-library/react'
 import CryptoKitties from './CryptoKitties'
 import Contracts from '../../contracts/CryptoKitties'
 import { getContract } from '../../utils'
 
-// Mock the getContract method
+// Mock wallet addresses used throughout tests
+const ETH_WALLET = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'      // Destination for transfers
+const DAPPERWALLET = '0x123d35Cc6634C0532925a3b844Bc454e4438f123'    // User's Dapper wallet
+const OTHER_DAPPERWALLET = '0x123d35Cc6634C0532925a3b844Bc454e4438f456' // Another wallet owning some kitties
+
+/**
+ * Mock implementation of the getContract utility
+ * This creates mock contract instances with predefined behaviors:
+ * 
+ * Sale/Sire Contract Methods:
+ * - getAuction: Returns auction data for kitty #2 (sale) and #3 (sire)
+ * - cancelAuction: Always succeeds unless invokeTx is mocked to fail
+ * 
+ * Core Contract Methods:
+ * - balanceOf: Always returns 1 (user has kitties)
+ * - totalSupply: Returns 100 (max valid kitty ID)
+ * - ownerOf: Maps kitty ownership based on ID ranges
+ * - transfer: Always succeeds unless invokeTx is mocked to fail
+ */
 vi.mock('../../utils', () => ({
     getContract: vi.fn().mockImplementation((abi, address) => {
         if (address === Contracts.Sale.addr || address === Contracts.Sire.addr) {
             return ({
                 methods: {
                     getAuction: vi.fn().mockImplementation((tokenId) => {
-                        return ((tokenId === '2' && address === Contracts.Sale.addr) || (tokenId === '3' && address === Contracts.Sire.addr)) ? ({
-                            call: vi.fn().mockResolvedValue(abi)
-                        }) : ({
-                            call: vi.fn().mockRejectedValue(new Error('Auction not found')) // Simulate not found
-                        })
+                        if (tokenId === '2' && address === Contracts.Sale.addr) {
+                            return { call: vi.fn().mockResolvedValue(abi) };
+                        } else if (tokenId === '3' && address === Contracts.Sire.addr) {
+                            return { call: vi.fn().mockResolvedValue(abi) };
+                        } else {
+                            return { call: vi.fn().mockRejectedValue(new Error('Auction not found')) };
+                        }
                     }),
                     cancelAuction: vi.fn().mockReturnValue({
                         call: vi.fn().mockResolvedValue(true), // Mock cancel auction
@@ -33,11 +77,10 @@ vi.mock('../../utils', () => ({
                     call: vi.fn().mockResolvedValue(100) // Mock total supply
                 }),
                 ownerOf: vi.fn().mockImplementation((tokenId) => {
-                    return tokenId === '99' ? ({
-                        call: vi.fn().mockRejectedValue(new Error('An error occurred')) // Mock error
-                    }) : ({ 
-                        call: vi.fn().mockResolvedValue('0x456') // Mock ownership check
-                    }) 
+                    if (tokenId === '99') {
+                        return { call: vi.fn().mockRejectedValue(new Error('An error occurred')) }; // Mock error
+                    }
+                    return { call: vi.fn().mockResolvedValue(tokenId === '1' || tokenId === '2' || tokenId === '3' ? OTHER_DAPPERWALLET : DAPPERWALLET) };
                 }),
                 transfer: vi.fn().mockReturnValue({
                     call: vi.fn().mockResolvedValue({}), // Mock transfer
@@ -48,204 +91,373 @@ vi.mock('../../utils', () => ({
     })
 }))
 
-// Mock invokeTx method
+// Mock transaction executor used by component
 const mockInvokeTx = vi.fn()
 
-// Mock ethereum wallet addresses
-const USER = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
-const DAPPERWALLET = '0x123d35Cc6634C0532925a3b844Bc454e4438f123'
-
+// Initialize contract instances with mock implementations
 const contracts = {
-    core: getContract(Contracts.Core.abi, Contracts.Core.addr),
-    sale: getContract(Contracts.Sale.abi, Contracts.Sale.addr),
-    sire: getContract(Contracts.Sire.abi, Contracts.Sire.addr)
+    core: getContract(Contracts.Core.abi, Contracts.Core.addr),    // NFT ownership/transfers
+    sale: getContract(Contracts.Sale.abi, Contracts.Sale.addr),    // Sale auction management
+    sire: getContract(Contracts.Sire.abi, Contracts.Sire.addr)    // Breeding auction management
 }
 
 beforeEach(() => {
-    vi.clearAllMocks()
-    window.alert = vi.fn() // Mock alert
+    vi.clearAllMocks()        // Reset all mock call counts
+    window.alert = vi.fn()    // Mock alert to verify error messages
 })
 
-test('renders CryptoKitties component', async () => {
-    const { getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+// Basic rendering and form interaction
+test('renders CryptoKitties component with title', async () => {
+    const { getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await waitFor(() => {
         const titleElement = getByText('CryptoKitties')
         expect(titleElement).toBeTruthy()
     })
 })
 
-test('handles ownership check for a valid kitty ID', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        expect(getByText(/transfer kitty #1/i)).toBeTruthy()
-        expect(contracts.core.methods.ownerOf).toHaveBeenCalledWith('1')
+test('displays kitty IDs in UI and handles multiple comma-separated IDs correctly', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
     })
-})
 
-test('transfers kitty and display success message + reset form c2a', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        const c2a = getByText('transfer kitty #1')
-        await act(async () => {
-            fireEvent.click(c2a)
-        })
-        const methodCall = contracts.core.methods.transfer(USER, '1')
-        expect(mockInvokeTx).toHaveBeenCalledWith(Contracts.Core.addr, methodCall, '0x0'),
-        expect(getByText(/Transfer method invoked for Kitty ID: #1/i)).toBeTruthy()
-        expect(getByText(/Reset form/i)).toBeTruthy()
-    })
-})
-
-test('updates tokenId in formDetails on change', async () => {
-    const { getByLabelText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await act(async () => {
-        fireEvent.change(getByLabelText(/kitty id:/i), { target: { value: '2' } })
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '4' } })
     })
-    const tokenIdInput = getByLabelText(/kitty id:/i) as HTMLInputElement
-    expect(tokenIdInput.value).toBe('2')
-})
 
-test('resets transferrable state when tokenId changes', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText(/kitty id:/i), { target: { value: '1' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        expect(getByText(/transfer kitty #1/i)).toBeTruthy()
-        await act(async () => {
-            fireEvent.change(getByLabelText(/kitty id:/i), { target: { value: '2' } })
-        })
-        expect(getByText('check ownership')).toBeTruthy()
+    await waitFor(() => {
+        expect(getByText('Kitty #4')).toBeTruthy()
+    })
+
+    // Test multiple IDs
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '1,2,3' } })
+    })
+
+    await waitFor(() => {
+        expect(getByText('Kitty #1')).toBeTruthy()
+        expect(getByText('Kitty #2')).toBeTruthy()
+        expect(getByText('Kitty #3')).toBeTruthy()
     })
 })
 
-test('checks sale and sire auctions if ownership check was false', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        expect(contracts.sale.methods.getAuction).toHaveBeenCalledWith('1')
-        expect(contracts.sire.methods.getAuction).toHaveBeenCalledWith('1')
-        expect(window.alert).toHaveBeenCalledWith('Kitty not owned by this Dapper Wallet')
+// Kitty transfer functionality
+test('transfers owned kitty to ETH wallet and displays success message', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '4' } })
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    await waitFor(() => {
+        expect(getByText('Transfer Kitty')).toBeTruthy()
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Transfer Kitty'))
+    })
+
+    const methodCall = contracts.core.methods.transfer(ETH_WALLET, '4')
+    expect(mockInvokeTx).toHaveBeenCalledWith(Contracts.Core.addr, methodCall, '0')
+    expect(getByText(/Transfer method invoked for Kitty ID: #4/i)).toBeTruthy()
+})
+
+test('updates form input value when user types kitty ID', async () => {
+    const { getByLabelText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    const input = getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:') as HTMLInputElement
+    await act(async () => {
+        fireEvent.change(input, { target: { value: '2' } })
+    })
+    expect(input.value).toBe('2')
+})
+
+test('shows/hides transfer button based on kitty ownership status', async () => {
+    const { getByLabelText, getByText, queryByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    // Start with owned kitty
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '4' } })
+    })
+
+    await waitFor(() => {
+        expect(getByText('Kitty #4')).toBeTruthy()
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    await waitFor(() => {
+        expect(getByText('Transfer Kitty')).toBeTruthy()
+    })
+
+    // Change to non-owned kitty
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '1' } })
+    })
+
+    await waitFor(() => {
+        expect(getByText('Kitty #1')).toBeTruthy()
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    await waitFor(() => {
+        expect(queryByText('Transfer Kitty')).toBeNull()
+        expect(getByText('Not owned by this Dapper Wallet')).toBeTruthy()
     })
 })
 
-test('shows cancel sale auction c2a if sale auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '2' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        expect(contracts.sale.methods.getAuction).toHaveBeenCalledWith('2')
-        expect(getByText(/cancel sale auction/i)).toBeTruthy()
+// Auction management
+test('checks both auction contracts when kitty is not owned by wallet', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
     })
-})
 
-test('shows cancel sire auction c2a if sire auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '3' } })
-            fireEvent.click(getByText('check ownership'))
-        })
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '3' } })
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+    await waitFor(() => {
         expect(contracts.sale.methods.getAuction).toHaveBeenCalledWith('3')
-        expect(getByText(/cancel sire auction/i)).toBeTruthy()
+        expect(contracts.sire.methods.getAuction).toHaveBeenCalledWith('3')
     })
 })
 
-test('user can cancel a sale auction if sale auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '2' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        await act(async () => {
-            fireEvent.click(getByText(/cancel sale auction/i))
-        })
+test('shows cancel sale auction button when kitty is listed for sale', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '2' } })
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    await waitFor(() => {
+        expect(contracts.sale.methods.getAuction).toHaveBeenCalledWith('2')
+        expect(getByText(/Cancel Sale Auction/i)).toBeTruthy()
+    })
+})
+
+test('shows cancel sire auction button when kitty is listed for siring', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '3' } })
+    })
+
+    await waitFor(() => {
+        expect(getByText('Kitty #3')).toBeTruthy()
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+    await waitFor(() => {
+        expect(contracts.sire.methods.getAuction).toHaveBeenCalledWith('3')
+        expect(getByText(/Cancel Sire Auction/i)).toBeTruthy()
+    })
+})
+
+test('successfully cancels sale auction when cancel button is clicked', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '2' } })
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText(/Cancel Sale Auction/i))
+    })
+
+    await waitFor(() => {
         const methodCall = contracts.sale.methods.cancelAuction('2')
-        expect(mockInvokeTx).toHaveBeenCalledWith(Contracts.Sale.addr, methodCall, '0x0')
+        expect(mockInvokeTx).toHaveBeenCalledWith(Contracts.Sale.addr, methodCall, '0')
     })
 })
 
-test('user can cancel a sire auction if sire auction was found', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '3' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        await act(async () => {
-            fireEvent.click(getByText(/cancel sire auction/i))
-        })
-        const methodCall = contracts.sire.methods.cancelAuction('3')
-        expect(mockInvokeTx).toHaveBeenCalledWith(Contracts.Sire.addr, methodCall, '0x0')
+test('successfully cancels sire auction when cancel button is clicked', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={OTHER_DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
     })
-})
 
-test('shows alert if there is an error during ownership check', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText(/kitty id:/i), { target: { value: '99' } }) // pass in this tokenId to mock an error
-            fireEvent.click(getByText('check ownership'))
-        })
-        expect(window.alert).toHaveBeenCalledWith('An error occurred while checking ownership.')
-    })
-})
-
-test('shows alert if there was an error while cancelling auction', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '3' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        mockInvokeTx.mockImplementation(() => Promise.reject(new Error('Auction revert error')))
-        await act(async () => {
-            fireEvent.click(getByText(/cancel sire auction/i))
-        })
-        expect(window.alert).toHaveBeenCalledWith('Failed to cancel auction. Please try again.')
-    })
-})
-
-test('shows alert if there was an error during transfer', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    await waitFor(async () => {
-        await act(async () => {
-            fireEvent.change(getByLabelText('kitty id:'), { target: { value: '1' } })
-            fireEvent.click(getByText('check ownership'))
-        })
-        mockInvokeTx.mockImplementation(() => Promise.reject(new Error('Transfer revert error')))
-        await act(async () => {
-            fireEvent.click(getByText(/transfer kitty #1/i))
-        })
-        expect(window.alert).toHaveBeenCalledWith('Failed to transfer. Please try again.')
-    })
-})
-
-test('shows alert for invalid Kitty ID', async () => {
-    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={USER} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     await act(async () => {
-        fireEvent.change(getByLabelText('kitty id:'), { target: { value: '101' } }) // Note this is 1 more than the mocked totalSupply return value 100
-        fireEvent.click(getByText('check ownership'))
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '3' } })
     })
-    expect(window.alert).toHaveBeenCalledWith('Invalid Kitty Id. Please try again.')
+
+    await waitFor(() => {
+        expect(getByText('Kitty #3')).toBeTruthy()
+    })
+
     await act(async () => {
-        fireEvent.change(getByLabelText('kitty id:'), { target: { value: '10a' } })
-        fireEvent.click(getByText('check ownership'))
+        fireEvent.click(getByText('Check Kitties'))
     })
-    expect(window.alert).toHaveBeenCalledWith('Invalid Kitty Id. Please try again.')
+
+    await act(async () => {
+        fireEvent.click(getByText(/Cancel Sire Auction/i))
+    })
+
+    const methodCall = contracts.sire.methods.cancelAuction('3')
+    expect(mockInvokeTx).toHaveBeenCalledWith(Contracts.Sire.addr, methodCall, '0')
+})
+
+// Error handling
+test('shows error alert when ownership check fails for kitty ID', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={OTHER_DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '99' } })
+    })
+
+    await waitFor(() => {
+        expect(getByText('Kitty #99')).toBeTruthy()
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    expect(window.alert).toHaveBeenCalledWith('An error occurred while checking ownership.')
+})
+
+test('shows error alert when auction cancellation fails', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={OTHER_DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '3' } })
+    })
+
+    await waitFor(() => {
+        expect(getByText('Kitty #3')).toBeTruthy()
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    mockInvokeTx.mockImplementation(() => Promise.reject(new Error('Auction revert error')))
+    await act(async () => {
+        fireEvent.click(getByText(/Cancel Sire Auction/i))
+    })
+
+    expect(window.alert).toHaveBeenCalledWith('Failed to cancel auction. Please try again.')
+})
+
+test('shows error alert when kitty transfer fails', async () => {
+    const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '4' } })
+    })
+
+    await waitFor(() => {
+        expect(getByText('Kitty #4')).toBeTruthy()
+    })
+
+    await act(async () => {
+        fireEvent.click(getByText('Check Kitties'))
+    })
+
+    mockInvokeTx.mockImplementation(() => Promise.reject(new Error('Transfer revert error')))
+    await act(async () => {
+        fireEvent.click(getByText('Transfer Kitty'))
+    })
+
+    expect(window.alert).toHaveBeenCalledWith('Failed to transfer. Please try again.')
+})
+
+test('shows alert when user enters non-numeric or out-of-range kitty ID', async () => {
+    const { getByLabelText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    
+    // Wait for total supply to be set
+    await waitFor(() => {
+        expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
+        expect(contracts.core.methods.totalSupply().call).toHaveReturned()
+    })
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '101' } })
+    })
+
+    expect(window.alert).toHaveBeenCalledWith('Some kitty IDs were invalid and will be ignored')
+
+    await act(async () => {
+        fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '10a' } })
+    })
+
+    expect(window.alert).toHaveBeenCalledWith('Some kitty IDs were invalid and will be ignored')
 })

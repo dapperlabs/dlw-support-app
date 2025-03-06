@@ -4,11 +4,6 @@ import ERC721 from './ERC721'
 import { abi } from '@openzeppelin/contracts/build/contracts/ERC721.json'
 import { getContract } from '../../utils'
 
-// Mock web3-validator
-vi.mock('web3-validator', () => ({
-    isAddress: vi.fn().mockReturnValue(true)
-}))
-
 const MOCK_ADDRESSES = {
     USER: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
     DAPPER: '0x123d35Cc6634C0532925a3b844Bc454e4438f123',
@@ -35,6 +30,11 @@ vi.mock('../../utils', () => ({
             }),
         }
     })
+}))
+
+// Mock web3-validator
+vi.mock('web3-validator', () => ({
+    isAddress: vi.fn().mockReturnValue(true)
 }))
 
 // Mock the invokeTx method
