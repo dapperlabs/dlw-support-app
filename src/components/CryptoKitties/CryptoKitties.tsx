@@ -4,26 +4,14 @@ import { Contract } from 'web3-eth-contract'
 import { AbiFragment } from 'web3'
 
 /**
- * Interface for managing CryptoKitties transfer and auction form state
+ * Interface for managing form input and loading state
  * @interface FormDetails
  * @property {string} kittyId - ID of the CryptoKitty or comma-separated IDs
- * @property {boolean} transferrable - Whether the kitty can be transferred
- * @property {boolean} forSale - Whether the kitty is in a sale auction
- * @property {boolean} forSire - Whether the kitty is in a sire auction
  * @property {boolean} loading - Loading state during operations
- * @property {boolean} auctionCancelled - Whether auction was successfully cancelled
- * @property {boolean} transferSuccess - Whether transfer was successful
- * @property {string} [error] - Error message if operation failed
  */
 export interface FormDetails {
     kittyId: string,
-    transferrable: boolean,
-    forSale: boolean,
-    forSire: boolean,
     loading: boolean,
-    auctionCancelled: boolean,
-    transferSuccess: boolean,
-    error?: string,
 }
 
 /**
@@ -75,44 +63,39 @@ const CryptoKitties: React.FC<{
 
     const initFormState: FormDetails = {
         kittyId: '',
-        transferrable: false,
-        forSire: false,
-        forSale: false,
         loading: false,
-        auctionCancelled: false,
-        transferSuccess: false,
-        error: undefined,
     }
 
     // Component state
     const [kittyStatuses, setKittyStatuses] = useState<KittyStatus[]>([]) // Status for multiple kitties
-    const [total, setTotal] = useState<number>(0) // Total CryptoKitties supply
     const [balance, setBalance] = useState<number>(0) // User's CryptoKitties balance
+    const [totalSupply, setTotalSupply] = useState<number>(0) // Total number of CryptoKitties
     const [formDetails, setFormDetails] = useState<FormDetails>(initFormState) // Form state
 
     useEffect(() => {
-        const getCryptoKittiesBalanceAndTotal = async () => {
+        const init = async () => {
             const _balance = await core.methods.balanceOf(dapperWalletAddress).call()
-            const _total = await core.methods.totalSupply().call()
-            if (_balance !== undefined && _balance !== null && _total !== undefined && _total !== null) {
+            const _totalSupply = await core.methods.totalSupply().call()
+            if (_balance !== undefined && _balance !== null) {
                 setBalance(parseInt(_balance.toString()))
-                setTotal(parseInt(_total.toString()))
+            }
+            if (_totalSupply !== undefined && _totalSupply !== null) {
+                setTotalSupply(parseInt(_totalSupply.toString()))
             }
         }
-        getCryptoKittiesBalanceAndTotal()
-    }, [])
+        init()
+    }, [core, dapperWalletAddress])
 
-    useEffect(() => {
-        if (formDetails.transferrable || formDetails.forSire || formDetails.forSale || formDetails.error) {
-            setFormDetails(prevState => ({
-                ...prevState,
-                transferrable: false,
-                forSale: false,
-                forSire: false,
-                error: undefined
-            }))
-        }
-    }, [formDetails.kittyId])
+    /**
+     * Validates a kitty ID format and range
+     * @param {string} id - ID to validate
+     * @returns {boolean} Whether ID is valid
+     */
+    const isValidKittyId = (id: string) => {
+        if (!(/^\d+$/.test(id.trim()))) return false;
+        const numId = parseInt(id.trim());
+        return numId <= totalSupply;
+    }
 
     /**
      * Checks if a kitty is in an active auction
@@ -142,13 +125,14 @@ const CryptoKitties: React.FC<{
         const methodCall = contract.methods.cancelAuction(tokenId)
         try {
             await invokeTx(address, methodCall, '0')
-            setFormDetails(prevState => ({ ...prevState, forSale: false, forSire: false, auctionCancelled: true }))
             setKittyStatuses(prev => prev.map(s =>
                 s.id === tokenId ? { ...s, auctionCancelled: true } : s
             ));
         } catch (e) {
+            const errorMessage = 'Failed to cancel auction. Please try again.';
+            alert(errorMessage);
             setKittyStatuses(prev => prev.map(s =>
-                s.id === tokenId ? { ...s, error: 'Failed to cancel auction. Please try again.' } : s
+                s.id === tokenId ? { ...s, error: errorMessage } : s
             ));
         } finally {
             setFormDetails(prevState => ({ ...prevState, loading: false }))
@@ -168,15 +152,15 @@ const CryptoKitties: React.FC<{
         const methodCall = core.methods.transfer(walletAddress, kittyId)
         try {
             await invokeTx(address, methodCall, '0')
-            if (kittyStatuses.length > 0) {
-                setKittyStatuses(prev => prev.map(s =>
-                    s.id === kittyId ? { ...s, transferSuccess: true } : s
-                ))
-            } else {
-                setFormDetails(prevState => ({ ...prevState, transferrable: false, transferSuccess: true }))
-            }
+            setKittyStatuses(prev => prev.map(s =>
+                s.id === kittyId ? { ...s, transferSuccess: true } : s
+            ))
         } catch (e) {
-            setFormDetails(prev => ({ ...prev, error: 'Failed to transfer. Please try again.' }));
+            const errorMessage = 'Failed to transfer. Please try again.';
+            alert(errorMessage);
+            setKittyStatuses(prev => prev.map(s =>
+                s.id === kittyId ? { ...s, error: errorMessage } : s
+            ));
         } finally {
             setFormDetails(prevState => ({ ...prevState, loading: false }))
         }
@@ -196,24 +180,19 @@ const CryptoKitties: React.FC<{
             // Clear existing statuses when input changes
             setKittyStatuses([])
 
-            // If input contains commas, treat as multiple IDs
-            const ids = value.split(',').map(id => id.trim()).filter(id => id !== '');
-            if (ids.length > 0) {
-                // Validate all IDs
-                const validIds = ids.filter(id => /^\d+$/.test(id) && total && parseInt(id, 10) <= total);
-                if (validIds.length !== ids.length) {
-                    alert('Some kitty IDs were invalid and will be ignored');
-                }
+            // Show all IDs immediately
+            const ids = value.split(',')
+                .map(id => id.trim())
+                .filter(id => id !== '');
 
-                // Initialize statuses for valid IDs
-                setKittyStatuses(validIds.map(id => ({
-                    id,
-                    transferrable: false,
-                    forSale: false,
-                    forSire: false,
-                    loading: false
-                })));
-            }
+            setKittyStatuses(ids.map(id => ({
+                id,
+                transferrable: false,
+                forSale: false,
+                forSire: false,
+                loading: false,
+                error: !isValidKittyId(id) ? 'Invalid kitty ID' : undefined
+            })));
         }
         setFormDetails(newState)
     }
@@ -224,7 +203,10 @@ const CryptoKitties: React.FC<{
      * @async
      */
     const checkAllKitties = async () => {
-        const ids = formDetails.kittyId.split(',').map(id => id.trim()).filter(id => /^\d+$/.test(id));
+        // Get valid IDs
+        const ids = kittyStatuses
+            .filter(status => !status.error)
+            .map(status => status.id);
         for (let i = 0; i < ids.length; i++) {
             const kittyId = ids[i];
             setKittyStatuses(prev => prev.map(status =>
@@ -259,8 +241,9 @@ const CryptoKitties: React.FC<{
                     }
                 }
             } catch (error) {
+                const errorMessage = 'An error occurred while checking ownership.';
                 setKittyStatuses(prev => prev.map(status =>
-                    status.id === kittyId ? { ...status, loading: false, error: 'An error occurred while checking ownership.' } : status
+                    status.id === kittyId ? { ...status, loading: false, error: errorMessage } : status
                 ));
             }
         }
@@ -273,11 +256,6 @@ const CryptoKitties: React.FC<{
      * @returns {string} Formatted balance string
      */
     const formatBalance = (balance: number) => balance === 1 ? '1 CryptoKitty' : `${balance} CryptoKitties`
-
-    /**
-     * Resets the form state to initial values
-     */
-    // const resetForm = () => setFormDetails(initFormState)
 
     return (
         <>
@@ -299,7 +277,10 @@ const CryptoKitties: React.FC<{
                     placeholder="Example: 123 or 123,456,789"
                 />
             </label>
-            <button onClick={checkAllKitties} disabled={formDetails.loading || kittyStatuses.length === 0}>
+            <button 
+                onClick={checkAllKitties} 
+                disabled={formDetails.loading}
+            >
                 {'Check Kitties'}
             </button>
 
@@ -329,15 +310,7 @@ const CryptoKitties: React.FC<{
                                     )}
                                     {(status.forSale || status.forSire) && (
                                         <button
-                                            onClick={async () => {
-                                                setFormDetails(prev => ({
-                                                    ...prev,
-                                                    kittyId: status.id,
-                                                    forSale: status.forSale,
-                                                    forSire: status.forSire,
-                                                }));
-                                                await handleCancelAuction(status.forSale, status.id);
-                                            }}
+                                            onClick={async () => await handleCancelAuction(status.forSale, status.id)}
                                             disabled={formDetails.loading}
                                         >
                                             {`Cancel  ${status.forSale ? 'Sale' : 'Sire'} Auction`}
@@ -348,36 +321,7 @@ const CryptoKitties: React.FC<{
                         </div>
                     ))}
                 </div>
-            ) : formDetails.auctionCancelled || formDetails.transferSuccess || formDetails.error ? (
-                <div>
-                    {formDetails.error ? (
-                        <p className="error">{formDetails.error}</p>
-                    ) : formDetails.auctionCancelled ? (
-                        <p><span className={'success'}>✓</span>{`Cancel auction method invoked for Kitty ID: #${formDetails.kittyId}`}</p>
-                    ) : (
-                        <p><span className={'success'}>✓</span>{`Transfer method invoked for Kitty ID: #${formDetails.kittyId}`}</p>
-                    )}
-                </div>
-            ) : (
-                <div style={{ marginTop: '10px' }}>
-                    {formDetails.transferrable && (
-                        <button
-                            onClick={async () => await handleTransfer(formDetails.kittyId)}
-                            disabled={formDetails.loading}
-                        >
-                            {`transfer kitty #${formDetails.kittyId}`}
-                        </button>
-                    )}
-                    {(formDetails.forSale || formDetails.forSire) && (
-                        <button
-                            onClick={async () => await handleCancelAuction(formDetails.forSale, formDetails.kittyId)}
-                            disabled={formDetails.loading}
-                        >
-                            {`cancel ${formDetails.forSale ? 'sale' : 'sire'} auction`}
-                        </button>
-                    )}
-                </div>
-            )}
+            ) : null}
         </>
     )
 }

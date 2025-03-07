@@ -452,7 +452,7 @@ test('shows error alert when auction cancellation fails', async () => {
 })
 
 test('shows alert when user enters non-numeric or out-of-range kitty ID', async () => {
-    const { getByLabelText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
+    const { getByText, getByLabelText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     
     // Wait for total supply to be set
     await waitFor(() => {
@@ -464,41 +464,13 @@ test('shows alert when user enters non-numeric or out-of-range kitty ID', async 
         fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '101' } })
     })
 
-    expect(window.alert).toHaveBeenCalledWith('Some kitty IDs were invalid and will be ignored')
+    expect(getByText('Invalid kitty ID')).toBeTruthy()
 
     await act(async () => {
         fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '10a' } })
     })
-
-    expect(window.alert).toHaveBeenCalledWith('Some kitty IDs were invalid and will be ignored')
+    expect(getByText('Invalid kitty ID')).toBeTruthy()
 })
-
-// test('resets form state when reset button is clicked', async () => {
-//     const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
-    
-//     // Wait for total supply to be set
-//     await waitFor(() => {
-//         expect(contracts.core.methods.totalSupply().call).toHaveBeenCalled()
-//         expect(contracts.core.methods.totalSupply().call).toHaveReturned()
-//     })
-
-//     await act(async () => {
-//         fireEvent.change(getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:'), { target: { value: '4' } })
-//     })
-
-//     await waitFor(() => {
-//         expect(getByText('Kitty #4')).toBeTruthy()
-//     })
-
-//     // Click reset
-//     await act(async () => {
-//         fireEvent.click(getByText('Reset form'))
-//     })
-
-//     // // Verify form is reset
-//     const input = getByLabelText('Enter a CryptoKitty ID or multiple IDs separated by commas:') as HTMLInputElement
-//     expect(input.value).toBe('')
-// })
 
 test('shows error alert when kitty transfer fails', async () => {
     const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
