@@ -398,7 +398,7 @@ test('handles batch transfer of multiple kitties', async () => {
 })
 
 // Error handling
-test('shows error alert when ownership check fails for kitty ID', async () => {
+test('shows error when ownership check fails for kitty ID', async () => {
     const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={OTHER_DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     
     // Wait for total supply to be set
@@ -422,7 +422,7 @@ test('shows error alert when ownership check fails for kitty ID', async () => {
     expect(getByText('An error occurred while checking ownership.')).toBeTruthy()
 })
 
-test('shows error alert when auction cancellation fails', async () => {
+test('shows error when auction cancellation fails', async () => {
     const { getByLabelText, getByText } = render(<CryptoKitties walletAddress={ETH_WALLET} dapperWalletAddress={DAPPERWALLET} invokeTx={mockInvokeTx} {...contracts} />)
     
     // Wait for total supply to be set
@@ -448,7 +448,7 @@ test('shows error alert when auction cancellation fails', async () => {
         fireEvent.click(getByText(/Cancel Sire Auction/i))
     })
 
-    expect(window.alert).toHaveBeenCalledWith('Failed to cancel auction. Please try again.')
+    expect(getByText('Failed to cancel auction. Please try again.')).toBeTruthy()
 })
 
 test('shows alert when user enters non-numeric or out-of-range kitty ID', async () => {
