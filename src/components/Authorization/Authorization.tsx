@@ -168,7 +168,9 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
             ) : (
                 <>
                     <p>Use this form to add an Ethereum wallet as an authorized address to the Dapper wallet you're currently signed into.</p>
-                    <p>Ensure that you double-check the wallet address you've pasted to confirm it is correct.</p>
+                    <Styled.Warning>
+                        ⚠️ Note: double (triple!) check the wallet address you've pasted to confirm it is correct.
+                    </Styled.Warning>
                     <p>Once you're confident the address is correct, submit and sign the transaction.</p>
                     
                     <label>
