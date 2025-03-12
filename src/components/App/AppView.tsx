@@ -205,9 +205,7 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
                     <Route path="*" element={<Navigate to={'/'} replace />} />
                     <Route path="/" element={
                         <>  
-                            <Styled.Header>
-                                <Header {...{ handleSignIn, handleSignOut, isDapper, BASE_URL }} loggedIn={undefined} />
-                            </Styled.Header>
+                            <Header {...{ handleSignIn, handleSignOut, isDapper, BASE_URL }} loggedIn={undefined} />
                             <hr />
                             <Styled.Main>
                                 <Docs />
@@ -223,9 +221,7 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
     return (
         <Router basename={BASE_URL}>
             <ScrollToTop />
-            <Styled.Header>
-                <Header {...{ handleSignIn, handleSignOut, isDapper, BASE_URL }} loggedIn={walletAddress} />
-            </Styled.Header>
+            <Header {...{ handleSignIn, handleSignOut, isDapper, BASE_URL }} loggedIn={walletAddress} />
             <hr />
             <Styled.Main>
                 {isDapper ? (

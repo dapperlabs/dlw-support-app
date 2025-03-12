@@ -16,7 +16,8 @@ import * as Styled from './Docs.style'
  */
 const Docs: React.FC = () => {
     return (
-        <Styled.Div>
+        <>
+        
             <Styled.Section>
                 <h1>How to use this app</h1>
                 <Styled.Notice>
@@ -93,7 +94,7 @@ const Docs: React.FC = () => {
                     <li>Contact support with these details</li>
                 </ul>
             </Styled.Section>
-        </Styled.Div>
+        </>
     )
 }
 

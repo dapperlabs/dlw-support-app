@@ -1,59 +1,6 @@
 import styled from 'styled-components'
 import { breaks, fontSize, grey, gutters } from './config'
 
-export const Header = styled.header`
-    width: 90%;
-    @media (min-width: ${breaks['md']}) {
-        width: 94%;
-    }
-    margin: 0 auto;
-    max-width: 1592px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: ${gutters['md']} 0;
-    > h1 {
-        > a {
-            display: flex;
-            align-items: center;
-            > img {
-                width: 48px;
-                margin-right: 16px;
-            }
-            > span {
-                font-size: 18px;
-                display: none;
-                @media (min-width: ${breaks['md']}) {
-                    font-size: 24px;
-                    display: inline;
-                }
-                &.mobile {
-                    display: inline;
-                    @media (min-width: ${breaks['md']}) {
-                        display: none;
-                    }
-                } 
-            }
-        }
-    }
-    > button {
-        background-color: #EEE;
-        border: 0;
-        padding: ${gutters['sm']} ${gutters['md']};
-        display: flex;
-        align-items: center;
-        border-radius: ${gutters['xs']};
-        line-height: 30px;
-        > svg, > img {
-            margin-right: ${gutters['sm']};
-            width: 30px;
-        }
-        > img {
-            border-radius: 4px;
-        }
-    }
-`
-
 export const Main = styled.main`
     width: 90%;
     @media (min-width: ${breaks['md']}) {
@@ -63,21 +10,22 @@ export const Main = styled.main`
     max-width: 1592px;
     margin-top: 40px;
     padding-bottom: ${gutters['xxl']};
-    > h1 {
-        margin: ${gutters['xxl']} 0 ${gutters['lg']};
-    }
+
     > h2 {
         margin-bottom: ${gutters['lg']};
     }
+
     > h3 {
         margin-bottom: ${gutters['md']};
         + p {
             margin-bottom: ${gutters['xl']};
         }
     }
+
     h4 {
         margin-bottom: ${gutters['md']};
     }
+
     > p {
         max-width: 900px;
         + ul {
@@ -94,34 +42,37 @@ export const Main = styled.main`
         > i {
             font-style: italic; 
         }
+
+        > b {
+            font-weight: bold;
+        }
     }
+
     > code {
         margin-bottom: ${gutters['md']};
         display: block;
-        + p {
-            margin-bottom: ${gutters['xl']};
-        }
         > span {
             display: inline-block;
             margin-left: ${gutters['md']};
             font-size: smaller;
         }
     }
+
     > p, > code {
         > span:not(.success) {
             text-decoration: underline;
             cursor: pointer;
-        } 
+        }
     }
+
     > label {
         font-weight: bold; 
     }
-    p > b {
-        font-weight: bold;
-    }
+
     > div {
         margin-top: ${gutters['md']}; 
     }
+
     input[type='text'], input[type='number'], textarea {
         padding: ${gutters['md']} ${gutters['lg']};
         font-family: monospace;
@@ -130,6 +81,7 @@ export const Main = styled.main`
         margin-bottom: ${gutters['md']};
         box-sizing: border-box;
     }
+
     input[type='text'], textarea {
         max-width: 620px;
         &.tokenId {
@@ -137,6 +89,7 @@ export const Main = styled.main`
             
         }
     }
+
     input[type='submit'] {
         padding: ${gutters['md']} ${gutters['lg']};
         font-family: monospace;
@@ -148,12 +101,14 @@ export const Main = styled.main`
         font-size: ${fontSize['sm']};
         min-height: 180px;
     }
+
     button {
         padding: ${gutters['md']} ${gutters['lg']};
         font-family: monospace;
         font-size: ${fontSize['md']};
         display: block;
     }
+
     > ul {
         display: flex;
         > li {
@@ -190,11 +145,27 @@ export const Div = styled.div`
     min-height: 60vh;
 `
 
-export const Section = styled.section`
-`
-
 export const Grid = styled.div`
     width: 100%;
     display: flex;
     flex-wrap: wrap;
+`
+
+export const Notice = styled.div`
+    background-color: #fff8dc;
+    border-left: 4px solid #ffd700;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 4px;
+`
+
+export const Warning = styled.div`
+    background-color: #fff0f0;
+    border-left: 4px solid #ff4444;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+    color: #cc0000;
+    font-weight: 500;
+    line-height: 26px;
 `
