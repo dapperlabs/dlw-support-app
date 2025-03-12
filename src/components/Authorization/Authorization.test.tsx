@@ -104,3 +104,88 @@ test('alerts user if there is an error while setting new authorization', async (
     })
     expect(window.alert).toHaveBeenCalledWith('Error while setting new authorization')
 })
+
+// New tests for loading state
+test('disables input and button during authorization transaction', async () => {
+    const contract = getContract(abi, MOCK_ADDRESSES.DAPPER) as any
+    const { getByRole } = render(
+        <Authorization 
+            walletAddress={MOCK_ADDRESSES.DAPPER} 
+            contract={contract} 
+        />
+    )
+    const input = getByRole('textbox', { name: /Add new authorization:/i }) as HTMLInputElement
+    const button = getByRole('button', { name: /Set new authorized address/i }) as HTMLButtonElement
+
+    // Create a promise that we can resolve later
+    let resolveTransaction: (value: unknown) => void
+    const transactionPromise = new Promise(resolve => {
+        resolveTransaction = resolve
+    })
+    contract.methods.setAuthorized().send.mockReturnValueOnce(transactionPromise)
+
+    await act(async () => {
+        fireEvent.change(input, { target: { value: MOCK_ADDRESSES.NEW_AUTH } })
+        fireEvent.click(button)
+    })
+
+    // Wait for and check loading state
+    await waitFor(() => {
+        expect(input.disabled).toBeTruthy()
+        expect(button.disabled).toBeTruthy()
+        expect(button.textContent).toBe('Setting authorization...')
+    })
+
+    // Resolve the transaction
+    await act(async () => {
+        resolveTransaction!({})
+    })
+})
+
+test('clears loading state after error', async () => {
+    const contract = getContract(abi, MOCK_ADDRESSES.DAPPER) as any
+    const { getByRole } = render(
+        <Authorization 
+            walletAddress={MOCK_ADDRESSES.DAPPER} 
+            contract={contract} 
+        />
+    )
+    const input = getByRole('textbox', { name: /Add new authorization:/i }) as HTMLInputElement
+    const button = getByRole('button', { name: /Set new authorized address/i }) as HTMLButtonElement
+
+    contract.methods.setAuthorized().send.mockRejectedValueOnce(new Error('Error while setting new authorization'))
+
+    await act(async () => {
+        fireEvent.change(input, { target: { value: MOCK_ADDRESSES.NEW_AUTH } })
+        fireEvent.click(button)
+    })
+
+    // Check that loading state is cleared
+    expect(button.textContent).toBe('Set new authorized address')
+    expect(input.disabled).toBeFalsy()
+    expect(button.disabled).toBeFalsy()
+})
+
+test('clears loading state and does not show alert when user denies transaction', async () => {
+    const contract = getContract(abi, MOCK_ADDRESSES.DAPPER) as any
+    const { getByRole } = render(
+        <Authorization 
+            walletAddress={MOCK_ADDRESSES.DAPPER} 
+            contract={contract} 
+        />
+    )
+    const input = getByRole('textbox', { name: /Add new authorization:/i }) as HTMLInputElement
+    const button = getByRole('button', { name: /Set new authorized address/i }) as HTMLButtonElement
+
+    contract.methods.setAuthorized().send.mockRejectedValueOnce(new Error('User denied transaction'))
+
+    await act(async () => {
+        fireEvent.change(input, { target: { value: MOCK_ADDRESSES.NEW_AUTH } })
+        fireEvent.click(button)
+    })
+
+    // Check that loading state is cleared
+    expect(button.textContent).toBe('Set new authorized address')
+    expect(input.disabled).toBeFalsy()
+    expect(button.disabled).toBeFalsy()
+})

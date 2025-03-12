@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AbiItem } from 'web3-utils'
 import { Contract } from 'web3-eth-contract'
 import { isAddress } from 'web3-validator'
+import * as Styled from '../../style'
 
 /**
  * Interface for managing Dapper wallet authorization details
@@ -22,6 +23,7 @@ interface WalletDetails {
     cosigner?: string;
     newAuthorized: string;
     getCosigner: string;
+    loading: boolean;
 }
 
 /**
@@ -64,7 +66,8 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
         authVersion: undefined,
         cosigner: undefined,
         newAuthorized: '',
-        getCosigner: ''
+        getCosigner: '',
+        loading: false
     })
 
     const [authorizationSuccess, setAuthorizationSuccess] = useState(false)
@@ -85,7 +88,10 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
      * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
      * @param {keyof WalletDetails} changeParam - Field identifier to update
      */
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, changeParam: keyof WalletDetails) => {
+    const handleInputChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        changeParam: 'newAuthorized' | 'getCosigner' | 'authVersion' | 'cosigner'
+    ) => {
         const { value } = e.target
         const newState = { ...walletDetails }
         newState[changeParam] = value
@@ -131,16 +137,20 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
      * @throws {Error} If authorization transaction fails
      */
     const handleSetAuthorized = async () => {
+        setWalletDetails(prev => ({ ...prev, loading: true }));
         try {
             const { newAuthorized } = walletDetails
             if (newAuthorized.startsWith('0x0000000000000000')) {
                 alert('Is this a Flow wallet address? You need to use an Ethereum wallet address so please ensure this is the wallet you have entered.')
+                setWalletDetails(prev => ({ ...prev, loading: false }));
                 return
             }
             await contract.methods.setAuthorized(newAuthorized, newAuthorized).send({ from: walletAddress, value: "0x0" })
             setAuthorizationSuccess(true)
-        } catch (error) {
+        } catch (error) { // we don't actually get here because of the way Dapper Wallet handles errors.
             alert('Error while setting new authorization')
+        } finally {
+            setWalletDetails(prev => ({ ...prev, loading: false }));
         }
     }
 
@@ -151,8 +161,9 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
             
             {authorizationSuccess ? (
                 <>
-                    <h3>Success! New authorized / cosigner pair for this address is:</h3>
+                    <p><span className={'success'}>✓</span>Success! New authorized / cosigner pair for this address is:</p>
                     <code>{walletDetails.newAuthorized}</code>
+                    <p>You can now sign out of your Dapper Wallet and re-login to this app using Metamask.</p>
                 </>
             ) : (
                 <>
@@ -167,14 +178,15 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
                             value={walletDetails.newAuthorized}
                             onChange={e => handleInputChange(e, 'newAuthorized')}
                             placeholder="Enter Ethereum address (0x...)"
+                            disabled={walletDetails.loading}
                         />
                     </label>
                     
                     <button
                         onClick={handleSetAuthorized}
-                        disabled={!isAddress(walletDetails.newAuthorized)}
+                        disabled={!isAddress(walletDetails.newAuthorized) || walletDetails.loading}
                     >
-                        Set new authorized address
+                        {walletDetails.loading ? 'Setting authorization...' : 'Set new authorized address'}
                     </button>
                 </>
             )}
