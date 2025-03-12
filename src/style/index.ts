@@ -49,7 +49,7 @@ export const Main = styled.main`
     }
 
     > code {
-        margin-bottom: ${gutters['md']};
+        margin-bottom: ${gutters['lg']};
         display: block;
         > span {
             display: inline-block;

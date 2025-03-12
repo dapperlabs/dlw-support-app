@@ -162,7 +162,7 @@ const Authorization: React.FC<AuthorizationProps> = ({ walletAddress, contract }
             {authorizationSuccess ? (
                 <>
                     <p><span className={'success'}>✓</span>Success! New authorized / cosigner pair for this address is:</p>
-                    <code>{walletDetails.newAuthorized}</code>
+                    <Styled.Notice>{walletDetails.newAuthorized}</Styled.Notice>
                     <p>You can now sign out of your Dapper Wallet and re-login to this app using Metamask.</p>
                 </>
             ) : (
