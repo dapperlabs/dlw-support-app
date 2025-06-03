@@ -6,6 +6,7 @@ import dapperWalletAbi from '../../contracts/DapperWallet'
 import Contracts from '../../contracts/CryptoKitties'
 import Authorization from '../Authorization'
 import CryptoKitties from '../CryptoKitties'
+import CryptoPunks from '../CryptoPunks'
 import Docs from '../Docs'
 import ERC20 from '../ERC20'
 import ERC721 from '../ERC721'
@@ -239,12 +240,13 @@ const AppView: React.FC<AuthProps> = ({ handleSignIn, handleSignOut, loggedIn: w
                         />
                         {isAuthorizedCosignerPair() && typeof walletDetails.dapperWallet === 'string' && (
                             <>
-                                <Menu links={['transactions', 'cryptokitties', 'ERC20', 'ERC721' ]} />
+                                <Menu links={['transactions', 'cryptokitties', 'ERC20', 'ERC721', 'cryptopunks' ]} />
                                 <Routes>
                                     <Route path={'/transactions'} element={<EthTransactions {...{ walletAddress, invokeTx }} />} />
                                     <Route path={'/erc20'} element={<ERC20 {...{ walletAddress, invokeTx }} dapperWalletAddress={walletDetails.dapperWallet} />} />
                                     <Route path={'/erc721'} element={<ERC721 {...{ walletAddress, invokeTx }} dapperWalletAddress={walletDetails.dapperWallet} />} />
                                     <Route path={'/cryptokitties'} element={<CryptoKitties {...{ walletAddress, invokeTx, core, sale, sire }} dapperWalletAddress={walletDetails.dapperWallet} />} />
+                                    <Route path={'/cryptopunks'} element={<CryptoPunks {...{ walletAddress, invokeTx, core, sale, sire }} dapperWalletAddress={walletDetails.dapperWallet} />} />
                                 </Routes>
                             </>
                         )}
