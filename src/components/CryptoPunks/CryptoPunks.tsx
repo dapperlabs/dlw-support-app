@@ -3,7 +3,6 @@ import { getContract } from '../../utils'
 import { AbiFragment } from 'web3'
 import { Contract } from 'web3-eth-contract'
 import { UnwrappedV2 } from '../../contracts/CryptoPunks'
-import { isAddress } from 'web3-validator'
 
 /**
  * Interface for managing (unwrapped) CryptoPunk transfer form state
@@ -166,6 +165,7 @@ const CryptoPunk: React.FC<{
             {balance > 0 && <p>{`You currently have: ${balance} CryptoPunks on your Dapper wallet`}</p>}
             {balance === 0 && <p>{`You currently have: ${balance} CryptoPunks on your Dapper wallet`}</p>}
             <p>{`You can use this page to transfer unwrapped CryptoPunks that reside on your Dapper Wallet.`}</p>
+            <p>{'If you have a wrapped CryptoPunk use the  ERC-721 section of this app to transfer it.'}</p>
             <p>{`Enter a token id to check if the CryptoPunk can be transferred.`}</p>
             <h3>{`Transfer CryptoPunk from contract:`}</h3>
             {contract && <code>{formDetails.contractAddress}</code>}
