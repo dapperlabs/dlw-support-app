@@ -19,7 +19,7 @@ export interface FormDetails {
     tokenId: string,
     transferrable: boolean,
     contractAddress: string,
-    contractAbi: string,
+    contractAbi: any,
     loading: boolean,
     transferSuccess: boolean,
     transferTo: string,
@@ -149,7 +149,7 @@ const CryptoPunk: React.FC<{
     ) => {
         const { value } = e.target
         const newState = { ...formDetails }
-        if (changeParam === 'tokenId' || changeParam === 'contractAddress' || changeParam === 'transferTo' || changeParam === 'contractAbi') {
+        if (changeParam === 'tokenId' || changeParam === 'transferTo') {
             newState[changeParam] = value
         }
         setFormDetails(newState)
