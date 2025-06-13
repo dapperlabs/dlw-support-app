@@ -96,7 +96,7 @@ test('transfers NFT and display success message + reset form c2a', async () => {
 })
 
 test('updates tokenId in formDetails on change', async () => {
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText } = render(
         <CryptoPunks 
             walletAddress={MOCK_ADDRESSES.USER} 
             dapperWalletAddress={MOCK_ADDRESSES.DAPPER} 
