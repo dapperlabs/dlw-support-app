@@ -57,7 +57,7 @@ test('renders CryptoPunks component', async () => {
     expect(titleElement).toBeTruthy()
 })
 
-test('handles ownership check for a valid token ID', async () => {
+test('handles ownership check for a valid punk ID', async () => {
     const { getByLabelText, getByText } = render(
         <CryptoPunks 
             walletAddress={MOCK_ADDRESSES.USER} 
@@ -73,7 +73,7 @@ test('handles ownership check for a valid token ID', async () => {
     expect(getContract(UnwrappedV2.abi as any, MOCK_ADDRESSES.NFT_CONTRACT).methods.punkIndexToAddress).toHaveBeenCalledWith('1')
 })
 
-test('transfers NFT and display success message + reset form c2a', async () => {
+test('transfers punk and display success message + reset form c2a', async () => {
     const { getByLabelText, getByText } = render(
         <CryptoPunks 
             walletAddress={MOCK_ADDRESSES.USER} 
@@ -89,7 +89,7 @@ test('transfers NFT and display success message + reset form c2a', async () => {
     await act(async () => {
         fireEvent.click(getByText(/transfer token #1/i))
     })
-    const methodCall = getContract(UnwrappedV2.abi as any, MOCK_ADDRESSES.NFT_CONTRACT).methods.transferPunk(MOCK_ADDRESSES.DAPPER, MOCK_ADDRESSES.USER, '1')
+    const methodCall = getContract(UnwrappedV2.abi as any, MOCK_ADDRESSES.NFT_CONTRACT).methods.transferPunk(MOCK_ADDRESSES.USER, '1')
     expect(mockInvokeTx).toHaveBeenCalledWith(MOCK_ADDRESSES.NFT_CONTRACT, methodCall, '0')
     expect(getByText(/Transfer method invoked for Token ID: #1/i)).toBeTruthy()
     expect(getByText(/Reset form/i)).toBeTruthy()
