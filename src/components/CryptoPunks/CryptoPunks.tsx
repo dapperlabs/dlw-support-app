@@ -124,7 +124,7 @@ const CryptoPunk: React.FC<{
     const handleTransfer = async () => {
         setFormDetails(prevState => ({ ...prevState, loading: true }))
         if (contract) {
-            const methodCall = contract.methods.transferPunk(dapperWalletAddress, formDetails.transferTo, formDetails.tokenId)
+            const methodCall = contract.methods.transferPunk(formDetails.transferTo, formDetails.tokenId)
             try {
                 await invokeTx(formDetails.contractAddress, methodCall, '0')
                 setFormDetails(prevState => ({ ...prevState, transferrable: false, transferSuccess: true }))
